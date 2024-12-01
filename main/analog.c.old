@@ -1,0 +1,33 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/adc.h"
+#include "esp_log.h"
+
+#define TAG "AnalogCompare"
+
+void app_main(void) {
+    // Configure ADC1 channel 6 (GPIO34) and channel 7 (GPIO35)
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_0);
+    adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_0);
+
+    while (1) {
+        // Read the analog values
+        int value1 = adc1_get_raw(ADC1_CHANNEL_6);
+        int value2 = adc1_get_raw(ADC1_CHANNEL_7);
+
+        // Compare the values
+        if (value1 > value2) {
+            ESP_LOGI(TAG, "GPIO34 has a higher value.");
+        } else if (value1 < value2) {
+            ESP_LOGI(TAG, "GPIO35 has a higher value.");
+        } else {
+            ESP_LOGI(TAG, "Both GPIO34 and GPIO35 have the same value.");
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(1000)); // Delay for 1 second
+    }
+}
+
+
+// https://docs.espressif.com/projects/esp-idf/en/stable/esp32h2/api-reference/peripherals/ana_cmpr.html

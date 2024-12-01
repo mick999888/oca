@@ -1,0 +1,130 @@
+[1/11] Performing build step for 'bootloader'
+[1/1] cd /home/mkarl/projects/oca/build/bootloader/esp-idf/esptool_py && /home/mkarl/.espressif/python_env/idf5.2_py3.12_env/bin/python /home/mkarl/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /home/mkarl/projects/oca/build/bootloader/bootloader.bin
+Bootloader binary size 0x6860 bytes. 0x7a0 bytes (7%) free.
+[2/11] Building C object esp-idf/IR_Receive/CMakeFiles/__idf_IR_Receive.dir/IR_Receive.c.obj
+FAILED: esp-idf/IR_Receive/CMakeFiles/__idf_IR_Receive.dir/IR_Receive.c.obj 
+/home/mkarl/.espressif/tools/xtensa-esp-elf/esp-13.2.0_20230928/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc -DESP_PLATFORM -DIDF_VER=\"v5.2.2\" -DMBEDTLS_CONFIG_FILE=\"mbedtls/esp_config.h\" -DSOC_MMU_PAGE_SIZE=CONFIG_MMU_PAGE_SIZE -DSOC_XTAL_FREQ_MHZ=CONFIG_XTAL_FREQ -DUNITY_INCLUDE_CONFIG_H -D_GLIBCXX_HAVE_POSIX_SEMAPHORE -D_GLIBCXX_USE_POSIX_SEMAPHORE -D_GNU_SOURCE -D_POSIX_READER_WRITER_LOCKS -I/home/mkarl/projects/oca/build/config -I/home/mkarl/projects/oca/components/IR_Receive -I/home/mkarl/projects/oca/components/SW_Function -I/home/mkarl/esp/esp-idf/components/newlib/platform_include -I/home/mkarl/esp/esp-idf/components/freertos/config/include -I/home/mkarl/esp/esp-idf/components/freertos/config/include/freertos -I/home/mkarl/esp/esp-idf/components/freertos/config/xtensa/include -I/home/mkarl/esp/esp-idf/components/freertos/FreeRTOS-Kernel/include -I/home/mkarl/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include -I/home/mkarl/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos -I/home/mkarl/esp/esp-idf/components/freertos/esp_additions/include -I/home/mkarl/esp/esp-idf/components/esp_hw_support/include -I/home/mkarl/esp/esp-idf/components/esp_hw_support/include/soc -I/home/mkarl/esp/esp-idf/components/esp_hw_support/include/soc/esp32 -I/home/mkarl/esp/esp-idf/components/esp_hw_support/port/esp32/. -I/home/mkarl/esp/esp-idf/components/heap/include -I/home/mkarl/esp/esp-idf/components/log/include -I/home/mkarl/esp/esp-idf/components/soc/include -I/home/mkarl/esp/esp-idf/components/soc/esp32 -I/home/mkarl/esp/esp-idf/components/soc/esp32/include -I/home/mkarl/esp/esp-idf/components/hal/platform_port/include -I/home/mkarl/esp/esp-idf/components/hal/esp32/include -I/home/mkarl/esp/esp-idf/components/hal/include -I/home/mkarl/esp/esp-idf/components/esp_rom/include -I/home/mkarl/esp/esp-idf/components/esp_rom/include/esp32 -I/home/mkarl/esp/esp-idf/components/esp_rom/esp32 -I/home/mkarl/esp/esp-idf/components/esp_common/include -I/home/mkarl/esp/esp-idf/components/esp_system/include -I/home/mkarl/esp/esp-idf/components/esp_system/port/soc -I/home/mkarl/esp/esp-idf/components/esp_system/port/include/private -I/home/mkarl/esp/esp-idf/components/xtensa/esp32/include -I/home/mkarl/esp/esp-idf/components/xtensa/include -I/home/mkarl/esp/esp-idf/components/xtensa/deprecated_include -I/home/mkarl/esp/esp-idf/components/lwip/include -I/home/mkarl/esp/esp-idf/components/lwip/include/apps -I/home/mkarl/esp/esp-idf/components/lwip/include/apps/sntp -I/home/mkarl/esp/esp-idf/components/lwip/lwip/src/include -I/home/mkarl/esp/esp-idf/components/lwip/port/include -I/home/mkarl/esp/esp-idf/components/lwip/port/freertos/include -I/home/mkarl/esp/esp-idf/components/lwip/port/esp32xx/include -I/home/mkarl/esp/esp-idf/components/lwip/port/esp32xx/include/arch -I/home/mkarl/esp/esp-idf/components/lwip/port/esp32xx/include/sys -I/home/mkarl/projects/oca/main -I/home/mkarl/esp/esp-idf/components/esp_ringbuf/include -I/home/mkarl/esp/esp-idf/components/efuse/include -I/home/mkarl/esp/esp-idf/components/efuse/esp32/include -I/home/mkarl/esp/esp-idf/components/esp_mm/include -I/home/mkarl/esp/esp-idf/components/driver/include -I/home/mkarl/esp/esp-idf/components/driver/deprecated -I/home/mkarl/esp/esp-idf/components/driver/analog_comparator/include -I/home/mkarl/esp/esp-idf/components/driver/dac/include -I/home/mkarl/esp/esp-idf/components/driver/gpio/include -I/home/mkarl/esp/esp-idf/components/driver/gptimer/include -I/home/mkarl/esp/esp-idf/components/driver/i2c/include -I/home/mkarl/esp/esp-idf/components/driver/i2s/include -I/home/mkarl/esp/esp-idf/components/driver/ledc/include -I/home/mkarl/esp/esp-idf/components/driver/mcpwm/include -I/home/mkarl/esp/esp-idf/components/driver/parlio/include -I/home/mkarl/esp/esp-idf/components/driver/pcnt/include -I/home/mkarl/esp/esp-idf/components/driver/rmt/include -I/home/mkarl/esp/esp-idf/components/driver/sdio_slave/include -I/home/mkarl/esp/esp-idf/components/driver/sdmmc/include -I/home/mkarl/esp/esp-idf/components/driver/sigma_delta/include -I/home/mkarl/esp/esp-idf/components/driver/spi/include -I/home/mkarl/esp/esp-idf/components/driver/temperature_sensor/include -I/home/mkarl/esp/esp-idf/components/driver/touch_sensor/include -I/home/mkarl/esp/esp-idf/components/driver/twai/include -I/home/mkarl/esp/esp-idf/components/driver/uart/include -I/home/mkarl/esp/esp-idf/components/driver/usb_serial_jtag/include -I/home/mkarl/esp/esp-idf/components/driver/touch_sensor/esp32/include -I/home/mkarl/esp/esp-idf/components/esp_pm/include -I/home/mkarl/esp/esp-idf/components/mbedtls/port/include -I/home/mkarl/esp/esp-idf/components/mbedtls/mbedtls/include -I/home/mkarl/esp/esp-idf/components/mbedtls/mbedtls/library -I/home/mkarl/esp/esp-idf/components/mbedtls/esp_crt_bundle/include -I/home/mkarl/esp/esp-idf/components/mbedtls/mbedtls/3rdparty/everest/include -I/home/mkarl/esp/esp-idf/components/mbedtls/mbedtls/3rdparty/p256-m -I/home/mkarl/esp/esp-idf/components/mbedtls/mbedtls/3rdparty/p256-m/p256-m -I/home/mkarl/esp/esp-idf/components/esp_bootloader_format/include -I/home/mkarl/esp/esp-idf/components/esp_app_format/include -I/home/mkarl/esp/esp-idf/components/bootloader_support/include -I/home/mkarl/esp/esp-idf/components/bootloader_support/bootloader_flash/include -I/home/mkarl/esp/esp-idf/components/esp_partition/include -I/home/mkarl/esp/esp-idf/components/app_update/include -I/home/mkarl/esp/esp-idf/components/spi_flash/include -I/home/mkarl/esp/esp-idf/components/pthread/include -I/home/mkarl/esp/esp-idf/components/esp_timer/include -I/home/mkarl/esp/esp-idf/components/app_trace/include -I/home/mkarl/esp/esp-idf/components/esp_event/include -I/home/mkarl/esp/esp-idf/components/nvs_flash/include -I/home/mkarl/esp/esp-idf/components/esp_phy/include -I/home/mkarl/esp/esp-idf/components/esp_phy/esp32/include -I/home/mkarl/esp/esp-idf/components/vfs/include -I/home/mkarl/esp/esp-idf/components/esp_netif/include -I/home/mkarl/esp/esp-idf/components/wpa_supplicant/include -I/home/mkarl/esp/esp-idf/components/wpa_supplicant/port/include -I/home/mkarl/esp/esp-idf/components/wpa_supplicant/esp_supplicant/include -I/home/mkarl/esp/esp-idf/components/esp_coex/include -I/home/mkarl/esp/esp-idf/components/esp_wifi/include -I/home/mkarl/esp/esp-idf/components/esp_wifi/wifi_apps/include -I/home/mkarl/esp/esp-idf/components/unity/include -I/home/mkarl/esp/esp-idf/components/unity/unity/src -I/home/mkarl/esp/esp-idf/components/cmock/CMock/src -I/home/mkarl/esp/esp-idf/components/console -I/home/mkarl/esp/esp-idf/components/http_parser -I/home/mkarl/esp/esp-idf/components/esp-tls -I/home/mkarl/esp/esp-idf/components/esp-tls/esp-tls-crypto -I/home/mkarl/esp/esp-idf/components/esp_adc/include -I/home/mkarl/esp/esp-idf/components/esp_adc/interface -I/home/mkarl/esp/esp-idf/components/esp_adc/esp32/include -I/home/mkarl/esp/esp-idf/components/esp_adc/deprecated/include -I/home/mkarl/esp/esp-idf/components/esp_eth/include -I/home/mkarl/esp/esp-idf/components/esp_gdbstub/include -I/home/mkarl/esp/esp-idf/components/esp_hid/include -I/home/mkarl/esp/esp-idf/components/tcp_transport/include -I/home/mkarl/esp/esp-idf/components/esp_http_client/include -I/home/mkarl/esp/esp-idf/components/esp_http_server/include -I/home/mkarl/esp/esp-idf/components/esp_https_ota/include -I/home/mkarl/esp/esp-idf/components/esp_psram/include -I/home/mkarl/esp/esp-idf/components/esp_lcd/include -I/home/mkarl/esp/esp-idf/components/esp_lcd/interface -I/home/mkarl/esp/esp-idf/components/protobuf-c/protobuf-c -I/home/mkarl/esp/esp-idf/components/protocomm/include/common -I/home/mkarl/esp/esp-idf/components/protocomm/include/security -I/home/mkarl/esp/esp-idf/components/protocomm/include/transports -I/home/mkarl/esp/esp-idf/components/protocomm/include/crypto/srp6a -I/home/mkarl/esp/esp-idf/components/protocomm/proto-c -I/home/mkarl/esp/esp-idf/components/esp_local_ctrl/include -I/home/mkarl/esp/esp-idf/components/espcoredump/include -I/home/mkarl/esp/esp-idf/components/espcoredump/include/port/xtensa -I/home/mkarl/esp/esp-idf/components/wear_levelling/include -I/home/mkarl/esp/esp-idf/components/sdmmc/include -I/home/mkarl/esp/esp-idf/components/fatfs/diskio -I/home/mkarl/esp/esp-idf/components/fatfs/src -I/home/mkarl/esp/esp-idf/components/fatfs/vfs -I/home/mkarl/esp/esp-idf/components/idf_test/include -I/home/mkarl/esp/esp-idf/components/idf_test/include/esp32 -I/home/mkarl/esp/esp-idf/components/ieee802154/include -I/home/mkarl/esp/esp-idf/components/json/cJSON -I/home/mkarl/projects/oca/components/mqtt/esp-mqtt/include -I/home/mkarl/esp/esp-idf/components/nvs_sec_provider/include -I/home/mkarl/esp/esp-idf/components/perfmon/include -I/home/mkarl/esp/esp-idf/components/spiffs/include -I/home/mkarl/esp/esp-idf/components/wifi_provisioning/include -I/home/mkarl/projects/oca/components/IR_Send -I/home/mkarl/projects/oca/components/esp-mqtt/include -mlongcalls -Wno-frame-address  -fno-builtin-memcpy -fno-builtin-memset -fno-builtin-bzero -fno-builtin-stpcpy -fno-builtin-strncpy -fdiagnostics-color=always -ffunction-sections -fdata-sections -Wall -Werror=all -Wno-error=unused-function -Wno-error=unused-variable -Wno-error=unused-but-set-variable -Wno-error=deprecated-declarations -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-enum-conversion -gdwarf-4 -ggdb -Og -fno-shrink-wrap -fmacro-prefix-map=/home/mkarl/projects/oca=. -fmacro-prefix-map=/home/mkarl/esp/esp-idf=/IDF -fstrict-volatile-bitfields -fno-jump-tables -fno-tree-switch-conversion -std=gnu17 -Wno-old-style-declaration -MD -MT esp-idf/IR_Receive/CMakeFiles/__idf_IR_Receive.dir/IR_Receive.c.obj -MF esp-idf/IR_Receive/CMakeFiles/__idf_IR_Receive.dir/IR_Receive.c.obj.d -o esp-idf/IR_Receive/CMakeFiles/__idf_IR_Receive.dir/IR_Receive.c.obj -c /home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c
+In file included from /home/mkarl/projects/oca/main/globals.h:7,
+                 from /home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:2:
+/home/mkarl/esp/esp-idf/components/driver/deprecated/driver/adc.h:19:2: warning: #warning "legacy adc driver is deprecated, please migrate to use esp_adc/adc_oneshot.h and esp_adc/adc_continuous.h for oneshot mode and continuous mode drivers respectively" [-Wcpp]
+   19 | #warning "legacy adc driver is deprecated, please migrate to use esp_adc/adc_oneshot.h and esp_adc/adc_continuous.h for oneshot mode and continuous mode drivers respectively"
+      |  ^~~~~~~
+In file included from /home/mkarl/projects/oca/main/globals.h:10:
+/home/mkarl/esp/esp-idf/components/esp_adc/deprecated/include/esp_adc_cal.h:17:2: warning: #warning "legacy adc calibration driver is deprecated, please migrate to use esp_adc/adc_cali.h and esp_adc/adc_cali_scheme.h" [-Wcpp]
+   17 | #warning "legacy adc calibration driver is deprecated, please migrate to use esp_adc/adc_cali.h and esp_adc/adc_cali_scheme.h"
+      |  ^~~~~~~
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:25:1: warning: ignoring attribute 'section (".iram1.10")' because it conflicts with previous 'section (".iram1.8")' [-Wattributes]
+   25 | {
+      | ^
+In file included from /home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:4:
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.h:15:16: note: previous declaration here
+   15 | void IRAM_ATTR ISR_TIMER_SUB1(void* arg);
+      |                ^~~~~~~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:31:1: warning: ignoring attribute 'section (".iram1.11")' because it conflicts with previous 'section (".iram1.9")' [-Wattributes]
+   31 | {
+      | ^
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.h:16:16: note: previous declaration here
+   16 | void IRAM_ATTR ISR_TIMER_SUB2(void* arg);
+      |                ^~~~~~~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:37:1: warning: ignoring attribute 'section (".iram1.12")' because it conflicts with previous 'section (".iram1.7")' [-Wattributes]
+   37 | {
+      | ^
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.h:13:16: note: previous declaration here
+   13 | void IRAM_ATTR ISR_8_BUTTON (void* arg);
+      |                ^~~~~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:42:1: warning: ignoring attribute 'section (".iram1.13")' because it conflicts with previous 'section (".iram1.6")' [-Wattributes]
+   42 | {
+      | ^
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.h:12:16: note: previous declaration here
+   12 | void IRAM_ATTR ISR_7_MAIN2 (void* arg);
+      |                ^~~~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:47:1: warning: ignoring attribute 'section (".iram1.14")' because it conflicts with previous 'section (".iram1.5")' [-Wattributes]
+   47 | {
+      | ^
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.h:11:16: note: previous declaration here
+   11 | void IRAM_ATTR ISR_6_MAIN1 (void* arg);
+      |                ^~~~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:52:1: warning: ignoring attribute 'section (".iram1.15")' because it conflicts with previous 'section (".iram1.4")' [-Wattributes]
+   52 | {
+      | ^
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.h:10:16: note: previous declaration here
+   10 | void IRAM_ATTR ISR_5_HALT2 (void* arg);
+      |                ^~~~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c: In function 'ISR_5_HALT2':
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:57:26: error: 'ISR_SUB1' undeclared (first use in this function); did you mean 'ISR_SUB2'?
+   57 |         esp_intr_disable(ISR_SUB1);
+      |                          ^~~~~~~~
+      |                          ISR_SUB2
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:57:26: note: each undeclared identifier is reported only once for each function it appears in
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c: At top level:
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:62:1: warning: ignoring attribute 'section (".iram1.16")' because it conflicts with previous 'section (".iram1.3")' [-Wattributes]
+   62 | {
+      | ^
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.h:9:16: note: previous declaration here
+    9 | void IRAM_ATTR ISR_4_HALT1 (void* arg);
+      |                ^~~~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:69:1: warning: ignoring attribute 'section (".iram1.17")' because it conflicts with previous 'section (".iram1.2")' [-Wattributes]
+   69 | {
+      | ^
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.h:8:16: note: previous declaration here
+    8 | void IRAM_ATTR ISR_9_SUB2 (void* arg);
+      |                ^~~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:78:1: warning: ignoring attribute 'section (".iram1.18")' because it conflicts with previous 'section (".iram1.1")' [-Wattributes]
+   78 | {
+      | ^
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.h:7:16: note: previous declaration here
+    7 | void IRAM_ATTR ISR_3_SUB1 (void* arg);
+      |                ^~~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.c:87:1: warning: ignoring attribute 'section (".iram1.19")' because it conflicts with previous 'section (".iram1.0")' [-Wattributes]
+   87 | {
+      | ^
+/home/mkarl/projects/oca/components/IR_Receive/IR_Receive.h:6:16: note: previous declaration here
+    6 | void IRAM_ATTR ISR_2_IN (void* arg);
+      |                ^~~~~~~~
+[3/11] No install step for 'bootloader'
+[4/11] Building C object esp-idf/IR_Send/CMakeFiles/__idf_IR_Send.dir/IR_Send.c.obj
+In file included from /home/mkarl/projects/oca/main/globals.h:7,
+                 from /home/mkarl/projects/oca/components/IR_Send/IR_Send.c:2:
+/home/mkarl/esp/esp-idf/components/driver/deprecated/driver/adc.h:19:2: warning: #warning "legacy adc driver is deprecated, please migrate to use esp_adc/adc_oneshot.h and esp_adc/adc_continuous.h for oneshot mode and continuous mode drivers respectively" [-Wcpp]
+   19 | #warning "legacy adc driver is deprecated, please migrate to use esp_adc/adc_oneshot.h and esp_adc/adc_continuous.h for oneshot mode and continuous mode drivers respectively"
+      |  ^~~~~~~
+In file included from /home/mkarl/projects/oca/main/globals.h:10:
+/home/mkarl/esp/esp-idf/components/esp_adc/deprecated/include/esp_adc_cal.h:17:2: warning: #warning "legacy adc calibration driver is deprecated, please migrate to use esp_adc/adc_cali.h and esp_adc/adc_cali_scheme.h" [-Wcpp]
+   17 | #warning "legacy adc calibration driver is deprecated, please migrate to use esp_adc/adc_cali.h and esp_adc/adc_cali_scheme.h"
+      |  ^~~~~~~
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c: In function 'IR_Blinker_rechts_ein':
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c:19:19: warning: unused variable 'szBuffer' [-Wunused-variable]
+   19 |     unsigned char szBuffer     = 0b00000000;
+      |                   ^~~~~~~~
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c:18:19: warning: unused variable 'szStopBit' [-Wunused-variable]
+   18 |     unsigned char szStopBit    = 0b10000000;
+      |                   ^~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c: In function 'IR_Blinker_links_ein':
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c:88:19: warning: unused variable 'szBuffer' [-Wunused-variable]
+   88 |     unsigned char szBuffer     = 0b00000000;
+      |                   ^~~~~~~~
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c:87:19: warning: unused variable 'szStopBit' [-Wunused-variable]
+   87 |     unsigned char szStopBit    = 0b10000000;
+      |                   ^~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c: In function 'IR_Blinker_aus':
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c:157:19: warning: unused variable 'szBuffer' [-Wunused-variable]
+  157 |     unsigned char szBuffer     = 0b00000000;
+      |                   ^~~~~~~~
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c:156:19: warning: unused variable 'szStopBit' [-Wunused-variable]
+  156 |     unsigned char szStopBit    = 0b10000000;
+      |                   ^~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c: In function 'IR_Stop':
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c:227:19: warning: unused variable 'szBuffer' [-Wunused-variable]
+  227 |     unsigned char szBuffer     = 0b00000000;
+      |                   ^~~~~~~~
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c:226:19: warning: unused variable 'szStopBit' [-Wunused-variable]
+  226 |     unsigned char szStopBit    = 0b10000000;
+      |                   ^~~~~~~~~
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c: In function 'IR_Start':
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c:296:19: warning: unused variable 'szBuffer' [-Wunused-variable]
+  296 |     unsigned char szBuffer     = 0b00000000;
+      |                   ^~~~~~~~
+/home/mkarl/projects/oca/components/IR_Send/IR_Send.c:295:19: warning: unused variable 'szStopBit' [-Wunused-variable]
+  295 |     unsigned char szStopBit    = 0b10000000;
+      |                   ^~~~~~~~~
+ninja: build stopped: subcommand failed.
