@@ -357,7 +357,7 @@ void app_main(void)
 
     gpio_config_t io_conf = {
         .intr_type = GPIO_INTR_POSEDGE, // Interrupt on high level
-        .pin_bit_mask = (1ULL << GPIO03_PIN34_I_MAIN_ISR_1)|(1ULL << GPIO12_PIN13_I_IN_ISR_2)|(1ULL << GPIO15_PIN18_O_SPI_CS)|(1ULL << GPIO35_PIN05_I_SUB2_ISR_9)|(1ULL << GPIO17_PIN22_I_HALT1_ISR_4)|(1ULL << GPIO34_PIN04_I_HALT2_ISR_5)|(1ULL << GPIO03_PIN34_I_MAIN_ISR_1)|(1ULL << GPIO26_PIN09_I_MAIN2_ISR7)|(1ULL << GPIO33_PIN07_I_BUTTON_ISR8), // Bit mask of the pin
+        .pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1)|(1ULL << GPIO12_I_IN_ISR_2)|(1ULL << GPIO15_O_SPI_CS)|(1ULL << GPIO35_I_SUB2_ISR_9)|(1ULL << GPIO17_I_HALT1_ISR_4)|(1ULL << GPIO34_I_HALT2_ISR_5)|(1ULL << GPIO03_I_MAIN_ISR_1)|(1ULL << GPIO26_I_MAIN2_ISR7)|(1ULL << GPIO33_I_BUTTON_ISR8), // Bit mask of the pin
         .mode = GPIO_MODE_INPUT, // Set as input mode
         .pull_up_en = GPIO_PULLUP_DISABLE, // Disable pull-up
         .pull_down_en = GPIO_PULLUP_ENABLE // Disable pull-down
@@ -368,24 +368,24 @@ void app_main(void)
 
     // ISR #1 - Hauptstrecke
     //intr_handle_t ISR_1;
-    gpio_isr_handler_add(GPIO03_PIN34_I_MAIN_ISR_1, ISR_1_Einfahrt, (void*)GPIO03_PIN34_I_MAIN_ISR_1);
-    esp_err_t ISR_1_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_1_Einfahrt, (void*) GPIO03_PIN34_I_MAIN_ISR_1, &ISR_1);
+    gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, (void*)GPIO03_I_MAIN_ISR_1);
+    esp_err_t ISR_1_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_1_Einfahrt, (void*) GPIO03_I_MAIN_ISR_1, &ISR_1);
     if (ISR_1_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_1_err));
     }
 
     // ISR #2 - Eingang
     //intr_handle_t ISR_2;
-    gpio_isr_handler_add(GPIO12_PIN13_I_IN_ISR_2, ISR_2_IN, (void*)GPIO12_PIN13_I_IN_ISR_2);
-    esp_err_t ISR_2_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_2_IN, (void*) GPIO12_PIN13_I_IN_ISR_2, &ISR_2);
+    gpio_isr_handler_add(GPIO12_I_IN_ISR_2, ISR_2_IN, (void*)GPIO12_I_IN_ISR_2);
+    esp_err_t ISR_2_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_2_IN, (void*) GPIO12_I_IN_ISR_2, &ISR_2);
     if (ISR_2_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_2_err));
     }
 
     // ISR #3 - Sub1
     //intr_handle_t ISR_3;
-    gpio_isr_handler_add(GPIO15_PIN18_O_SPI_CS, ISR_3_SUB1, (void*)GPIO15_PIN18_O_SPI_CS);
-    esp_err_t ISR_3_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_3_SUB1, (void*) GPIO15_PIN18_O_SPI_CS, &ISR_3);
+    gpio_isr_handler_add(GPIO15_O_SPI_CS, ISR_3_SUB1, (void*)GPIO15_O_SPI_CS);
+    esp_err_t ISR_3_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_3_SUB1, (void*) GPIO15_O_SPI_CS, &ISR_3);
     if (ISR_3_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_3_err));
     }
@@ -393,8 +393,8 @@ void app_main(void)
 
     // ISR #9 - Sub2
     //intr_handle_t ISR_9;
-    gpio_isr_handler_add(GPIO35_PIN05_I_SUB2_ISR_9, ISR_9_SUB2, (void*)GPIO35_PIN05_I_SUB2_ISR_9);
-    esp_err_t ISR_9_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_9_SUB2, (void*) GPIO35_PIN05_I_SUB2_ISR_9, &ISR_9);
+    gpio_isr_handler_add(GPIO35_I_SUB2_ISR_9, ISR_9_SUB2, (void*)GPIO35_I_SUB2_ISR_9);
+    esp_err_t ISR_9_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_9_SUB2, (void*) GPIO35_I_SUB2_ISR_9, &ISR_9);
     if (ISR_9_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_9_err));
     }
@@ -402,40 +402,40 @@ void app_main(void)
 
     // ISR #4 - Halt1
     //intr_handle_t ISR_4;
-    gpio_isr_handler_add(GPIO17_PIN22_I_HALT1_ISR_4, ISR_4_HALT1, (void*)GPIO17_PIN22_I_HALT1_ISR_4);
-    esp_err_t ISR_4_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_4_HALT1, (void*) GPIO17_PIN22_I_HALT1_ISR_4, &ISR_4);
+    gpio_isr_handler_add(GPIO17_I_HALT1_ISR_4, ISR_4_HALT1, (void*)GPIO17_I_HALT1_ISR_4);
+    esp_err_t ISR_4_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_4_HALT1, (void*) GPIO17_I_HALT1_ISR_4, &ISR_4);
     if (ISR_4_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_4_err));
     }
 
     // ISR #5 - Halt2
     //intr_handle_t ISR_5;
-    gpio_isr_handler_add(GPIO34_PIN04_I_HALT2_ISR_5, ISR_5_HALT2, (void*)GPIO34_PIN04_I_HALT2_ISR_5);
-    esp_err_t ISR_5_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_5_HALT2, (void*) GPIO34_PIN04_I_HALT2_ISR_5, &ISR_5);
+    gpio_isr_handler_add(GPIO34_I_HALT2_ISR_5, ISR_5_HALT2, (void*)GPIO34_I_HALT2_ISR_5);
+    esp_err_t ISR_5_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_5_HALT2, (void*) GPIO34_I_HALT2_ISR_5, &ISR_5);
     if (ISR_5_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_5_err));
     }
 
     // ISR #6 - Main1
     //intr_handle_t ISR_6;
-    gpio_isr_handler_add(GPIO22_PIN29_I_MAIN1_ISR6, ISR_6_MAIN1, (void*)GPIO22_PIN29_I_MAIN1_ISR6);
-    esp_err_t ISR_6_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_6_MAIN1, (void*) GPIO22_PIN29_I_MAIN1_ISR6, &ISR_6);
+    gpio_isr_handler_add(GPIO22_I_MAIN1_ISR6, ISR_6_MAIN1, (void*)GPIO22_I_MAIN1_ISR6);
+    esp_err_t ISR_6_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_6_MAIN1, (void*) GPIO22_I_MAIN1_ISR6, &ISR_6);
     if (ISR_6_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_6_err));
     }
 
     // ISR #7 - Main2
     //intr_handle_t ISR_7;
-    gpio_isr_handler_add(GPIO26_PIN09_I_MAIN2_ISR7, ISR_7_MAIN2, (void*)GPIO26_PIN09_I_MAIN2_ISR7);
-    esp_err_t ISR_7_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_7_MAIN2, (void*) GPIO26_PIN09_I_MAIN2_ISR7, &ISR_7);
+    gpio_isr_handler_add(GPIO26_I_MAIN2_ISR7, ISR_7_MAIN2, (void*)GPIO26_I_MAIN2_ISR7);
+    esp_err_t ISR_7_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_7_MAIN2, (void*) GPIO26_I_MAIN2_ISR7, &ISR_7);
     if (ISR_7_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_7_err));
     }
 
     // ISR #8 - button start bus
     //intr_handle_t ISR_8;
-    gpio_isr_handler_add(GPIO33_PIN07_I_BUTTON_ISR8, ISR_8_BUTTON, (void*)GPIO33_PIN07_I_BUTTON_ISR8);
-    esp_err_t ISR_8_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_8_BUTTON, (void*) GPIO33_PIN08_I_BUTTON_ISR8, &ISR_8);
+    gpio_isr_handler_add(GPIO33_I_BUTTON_ISR8, ISR_8_BUTTON, (void*)GPIO33_I_BUTTON_ISR8);
+    esp_err_t ISR_8_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_8_BUTTON, (void*) GPIO33_I_BUTTON_ISR8, &ISR_8);
     if (ISR_8_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_8_err));
     }

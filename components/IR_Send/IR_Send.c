@@ -58,10 +58,10 @@ void IR_Blinker_rechts_ein(void) {
 				for (iState = 0; iState <= 1; iState++) {
 					switch (iState) {
 						case 0:
-							gpio_set_level(GPIO02_PIN24_O_MAIN_BLINKER, 0);									
+							gpio_set_level(GPIO02_O_MAIN_BLINKER, 0);									
 						    break;
 						case 1:
-							gpio_set_level(GPIO02_PIN24_O_MAIN_BLINKER, 1);
+							gpio_set_level(GPIO02_O_MAIN_BLINKER, 1);
 							break;
 						}
 							
