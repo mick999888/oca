@@ -17,10 +17,10 @@
 // #define GPIO32_PIN07_O_MAIN_BLINKER  7  // Hauptstrecke Blinker aus
 
 void SW_Main (int iDir) {
-    gpio_set_level(GPIO04_PIN26_O_MAIN_WEICHE, iDir);
+    gpio_set_level(GPIO04_O_MAIN_WEICHE, iDir);
 }
 
 void SW_Sub1 (int iDir) {
-    gpio_set_level(GPIO14_PIN12_O_SUB1_WEICHE, iDir);
+    gpio_set_level(GPIO18_O_SUB1_WEICHE, iDir);
 }
 

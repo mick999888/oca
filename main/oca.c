@@ -456,17 +456,17 @@ void app_main(void)
     ////////////////////////////////////////////////////////////////////////////////////////////
 
     // dcc signal
-    esp_rom_gpio_pad_select_gpio(GPIO02_PIN19_O_MAIN_BLINKER);  gpio_set_direction(GPIO02_PIN19_O_MAIN_BLINKER, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO05_PIN23_O_SUB1_BLINKER);  gpio_set_direction(GPIO05_PIN23_O_SUB1_BLINKER, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO16_PIN27_O_SUB1_EFFEKT);   gpio_set_direction(GPIO16_PIN27_O_SUB1_EFFEKT, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO21_PIN33_O_SUB2_EFFEKT);   gpio_set_direction(GPIO21_PIN33_O_SUB2_EFFEKT, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO32_PIN07_O_MAIN_BLINKER);  gpio_set_direction(GPIO32_PIN07_O_MAIN_BLINKER, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO02_O_MAIN_BLINKER);  gpio_set_direction(GPIO02_O_MAIN_BLINKER, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO05_O_SUB1_BLINKER);  gpio_set_direction(GPIO05_O_SUB1_BLINKER, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO16_O_SUB1_EFFEKT);   gpio_set_direction(GPIO16_O_SUB1_EFFEKT, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO21_O_SUB2_EFFEKT);   gpio_set_direction(GPIO21_O_SUB2_EFFEKT, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO32_O_MAIN_BLINKER);  gpio_set_direction(GPIO32_O_MAIN_BLINKER, GPIO_MODE_OUTPUT);
 
     // straight signal
-    esp_rom_gpio_pad_select_gpio(GPIO04_PIN20_O_MAIN_WEICHE);   gpio_set_direction(GPIO04_PIN20_O_MAIN_WEICHE, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO18_PIN24_O_SUB1_WEICHE);   gpio_set_direction(GPIO18_PIN24_O_SUB1_WEICHE, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO25_PIN09_O_SUB1_STOP);     gpio_set_direction(GPIO25_PIN09_O_SUB1_STOP, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO27_PIN11_O_SUB2_STOP);     gpio_set_direction(GPIO27_PIN11_O_SUB2_STOP, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO04_O_MAIN_WEICHE);   gpio_set_direction(GPIO04_O_MAIN_WEICHE, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO18_O_SUB1_WEICHE);   gpio_set_direction(GPIO18_O_SUB1_WEICHE, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO25_O_SUB1_STOP);     gpio_set_direction(GPIO25_O_SUB1_STOP, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO27_O_SUB2_STOP);     gpio_set_direction(GPIO27_O_SUB2_STOP, GPIO_MODE_OUTPUT);
 
 /*
     xTaskCreatePinnedToCore(IR_Blinker_rechts_ein, "IR_Blinker_rechts_ein", 2048, NULL, 5, NULL, 0);
