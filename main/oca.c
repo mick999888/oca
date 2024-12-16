@@ -355,15 +355,80 @@ void app_main(void)
     esp_timer_handle_t ISR_MAIN2;
     ESP_ERROR_CHECK(esp_timer_create(&main1_timer_args, &ISR_MAIN2));
 
-    gpio_config_t io_conf = {
-        .intr_type = GPIO_INTR_POSEDGE, // Interrupt on high level
-        .pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1)|(1ULL << GPIO12_I_IN_ISR_2)|(1ULL << GPIO15_O_SPI_CS)|(1ULL << GPIO35_I_SUB2_ISR_9)|(1ULL << GPIO17_I_HALT1_ISR_4)|(1ULL << GPIO34_I_HALT2_ISR_5)|(1ULL << GPIO03_I_MAIN_ISR_1)|(1ULL << GPIO26_I_MAIN2_ISR7)|(1ULL << GPIO33_I_BUTTON_ISR8), // Bit mask of the pin
-        .mode = GPIO_MODE_INPUT, // Set as input mode
-        .pull_up_en = GPIO_PULLUP_DISABLE, // Disable pull-up
-        .pull_down_en = GPIO_PULLUP_ENABLE // Disable pull-down
-    };
+    //gpio_config_t io_conf = {
+    //    .intr_type = GPIO_INTR_POSEDGE, // Interrupt on high level
+    //    .pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1)|(1ULL << GPIO12_I_IN_ISR_2)|(1ULL << GPIO15_O_SPI_CS)|(1ULL << GPIO35_I_SUB2_ISR_9)|(1ULL << GPIO17_I_HALT1_ISR_4)|(1ULL << GPIO34_I_HALT2_ISR_5)|(1ULL << GPIO03_I_MAIN_ISR_1)|(1ULL << GPIO26_I_MAIN2_ISR7)|(1ULL << GPIO33_I_BUTTON_ISR8), // Bit mask of the pin
+    //    .mode = GPIO_MODE_INPUT, // Set as input mode
+    //    .pull_up_en = GPIO_PULLUP_DISABLE, // Disable pull-up
+    //    .pull_down_en = GPIO_PULLUP_ENABLE // Disable pull-down
+    //};
 
+    gpio_config_t io_conf;
+
+    // configure GPIO03_I_MAIN_ISR_1 
+    io_conf.intr_type    = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1);
+    io_conf.mode         = GPIO_MODE_INPUT;      
+    io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
+
+    // Configure GPIO12_I_IN_ISR_2
+    io_conf.intr_type    = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO12_I_IN_ISR_2);
+    io_conf.mode         = GPIO_MODE_INPUT;
+    io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
+    gpio_config(&io_conf);
+
+    // configure GPIO15_O_SPI_CS 
+    io_conf.intr_type    = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO15_O_SPI_CS);
+    io_conf.mode         = GPIO_MODE_INPUT;      
+    io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+
+    // Configure GPIO35_I_SUB2_ISR_9
+    io_conf.intr_type    = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO35_I_SUB2_ISR_9);
+    io_conf.mode         = GPIO_MODE_INPUT;
+    io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
+    gpio_config(&io_conf);
+
+    // configure GPIO17_I_HALT1_ISR_4 
+    io_conf.intr_type    = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO17_I_HALT1_ISR_4);
+    io_conf.mode         = GPIO_MODE_INPUT;      
+    io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+
+    // Configure GPIO34_I_HALT2_ISR_5
+    io_conf.intr_type    = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO34_I_HALT2_ISR_5);
+    io_conf.mode         = GPIO_MODE_INPUT;
+    io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
+    gpio_config(&io_conf);
+
+    // configure GPIO26_I_MAIN2_ISR7 
+    io_conf.intr_type    = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO26_I_MAIN2_ISR7);
+    io_conf.mode         = GPIO_MODE_INPUT;      
+    io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+
+    // Configure GPIO33_I_BUTTON_ISR8
+    io_conf.intr_type    = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO33_I_BUTTON_ISR8);
+    io_conf.mode         = GPIO_MODE_INPUT;
+    io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
+    gpio_config(&io_conf);
+
     gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
 
     // ISR #1 - Hauptstrecke
