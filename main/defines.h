@@ -28,6 +28,8 @@
 #define GPIO12_I_SPI_MISO     12  // Ethernet Anbindung
 #define GPIO13_O_SPI_MOSI     13  // Ethernet Anbindung
 #define GPIO14_O_SPI_SCK      11  // Ethernet Anbindung
+#define PIN_SPI_INT           31  // Ethernet Anbindung
+#define PIN_SPI_RST           32  // Ethernet Anbindung 
 
 
 //| GPIO   | DM9051      |
