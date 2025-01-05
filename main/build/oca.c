@@ -8,35 +8,16 @@
 #include "rom/ets_sys.h"
 #include "freertos/semphr.h"
 #include "driver/timer.h"
-#include "driver/spi_master.h"
-#include "esp_eth.h"
-#include "esp_eth_mac.h"
-#include "esp_netif.h"
-#include "esp_event.h"
-#include "nvs_flash.h"
-#include "driver/spi_master.h"
-#include "esp_log.h"
-#include "w5500.h" 
+
 #include "mqtt_client.h"
-#include "esp_http_server.h"
-#include "esp_eth_mac.h"
-
-
-//#include <PubSubClient.h>
-#include "mqtt_client_priv.h"
-#include "mqtt_msg.h"
-#include "mqtt_outbox.h"
+// #include "mqtt_client_priv.h"
+// #include "mqtt_msg.h"
+// #include "mqtt_outbox.h"
 
 #include "globals.h"
 #include "defines.h"
 #include "IR_Send.h"
 #include "SW_Function.h"
-
-
-//HINT: Function esp_eth_mac_new_esp32() has been refactored to accept device specific configuration and MAC specific configuration.
-//Please refer to the Ethernet section of Networking migration guide for more details.
-//HINT: Function esp_eth_phy_new_lan8720() has been removed, please use esp_eth_phy_new_lan87xx() instead.
-//Please refer to the Networking migration guide, section PHY Address Auto-detect, for more details.
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Semaphore + ISR hanlde setup
@@ -346,114 +327,6 @@ void IRAM_ATTR ISR_1_Einfahrt(void* arg)
 
 void app_main(void) 
 {
-
-    ////////////////////////////////////////////////////////////////////////////////////////////
-    // TCP setup
-    ////////////////////////////////////////////////////////////////////////////////////////////
-    // Initialize TCP/IP network interface (should be called only once in application)
-    ESP_ERROR_CHECK(esp_netif_init());
-
-    // Create default event loop that running in background
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-    esp_err_t ret;
-
-    // Initialize SPI bus
-    spi_bus_config_t buscfg = {
-        .miso_io_num = GPIO12_I_SPI_MISO,
-        .mosi_io_num = GPIO13_O_SPI_MOSI,
-        .sclk_io_num = GPIO14_O_SPI_SCK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 4096,
-    };
-
-    // Configure SPI device interface
-    spi_device_interface_config_t devcfg = {
-        .command_bits = 0,
-        .address_bits = 0,
-        .dummy_bits = 0,
-        .mode = 0,
-        .duty_cycle_pos = 128,
-        .cs_ena_pretrans = 0,
-        .cs_ena_posttrans = 0,
-        .clock_speed_hz = 1 * 1000 * 1000,
-        .spics_io_num = GPIO15_O_SPI_CS,
-        .flags = 0,
-        .queue_size = 1,
-    };
-    
-    ESP_ERROR_CHECK(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
-    spi_device_handle_t spi_handle;
-    ESP_ERROR_CHECK(spi_bus_add_device(HSPI_HOST, &devcfg, &spi_handle));
-
-    eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
-    eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
-    phy_config.phy_addr = 1;
-    phy_config.reset_gpio_num = -1;
-
-    eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(-1,1);
-    esp_eth_mac_t *mac = esp_eth_mac_new_w5500(&w5500_config, &mac_config);
-    esp_eth_phy_t *phy = esp_eth_phy_new_w5500(&phy_config);
-
-    esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
-    esp_eth_handle_t eth_handle = NULL;
-    ESP_ERROR_CHECK(esp_eth_driver_install(&config, &eth_handle));
-
-    PubSubClient client(eth_handle);
-
-    //==============================================================
-
-    esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
-    esp_netif_t *eth_netif = esp_netif_new(&netif_cfg);
-    esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle));
-
-    // Initialize the W5500
-    // ret = w5500_init(spi_handle);
-    ///if (ret != ESP_OK) {
-    ///    ESP_LOGE(TAG, "Failed to initialize W5500");
-    ///    return;
-    ///}
-
-    ///ESP_LOGI(TAG, "W5500 initialized successfully");    
-
-    // Initialize Ethernet driver
-    ///eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
-    //eth_esp32_spi_config_t spi_config = ETH_ESP32_SPI_DEFAULT_CONFIG(spi_handle);
-    ///spi_config.int_gpio_num = PIN_SPI_INT;
-    ///spi_config.phy_reset_gpio_num = PIN_SPI_RST;
-    ///eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
-    ///phy_config.phy_addr = 1;
-    ///phy_config.reset_gpio_num = PIN_SPI_RST;
-    ///esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&mac_config);
-    ///esp_eth_phy_t *phy = esp_eth_phy_new_w5500(&phy_config);
-    ///esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
-    ///esp_eth_handle_t eth_handle = NULL;
-    ///ESP_ERROR_CHECK(esp_eth_driver_install(&config, &eth_handle));
-
-    // https://github.com/espressif/esp-idf/blob/master/examples/ethernet/README.md
-
-    // Initialize Ethernet
-    // eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
-    // mac_config.rx_task_prio
-    // esp_eth_mac_t* mac = esp_eth_mac_new_esp32(&mac_config);
-
-    // esp_eth_phy_t* phy = esp_eth_phy_new_lan87xx(&ETH_PHY_LAN8720_DEFAULT_CONFIG);
-    // esp_eth_config_t eth_config = ETH_DEFAULT_CONFIG(mac, phy);
-    // esp_eth_handle_t eth_handle = NULL;
-    // esp_eth_driver_install(&eth_config, &eth_handle);
-    // esp_eth_start(eth_handle);
-
-    // Example: Print MAC address
-    // uint8_t mac_addr[6];
-    //  esp_eth_get_mac(eth_handle, mac_addr);
-    // ESP_LOGI(TAG, "MAC Address: %02X:%02X:%02X:%02X:%02X:%02X",
-    //          mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-
-
- 
-
-
     ////////////////////////////////////////////////////////////////////////////////////////////
     // define here all ISR routines
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -687,16 +560,7 @@ void app_main(void)
     xTaskCreatePinnedToCore(SW_Main, "SW_Main", 2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(SW_Sub1, "SW_Sub1", 2048, NULL, 5, NULL, 0);
 */
-    //  pin all to core "0"
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_8_BUTTON",   2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_7_MAIN2",    2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_6_MAIN1",    2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_5_HALT2",    2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_4_HALT1",    2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_9_SUB2",     2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_3_SUB1",     2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_2_IN",       2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_1_Einfahrt", 2048, NULL, 5, NULL, 0);   
+
 
 
     // Set the GPIO pin high
