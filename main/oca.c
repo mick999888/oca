@@ -16,7 +16,11 @@
 #include "nvs_flash.h"
 #include "driver/spi_master.h"
 #include "esp_log.h"
+<<<<<<< HEAD
 #include "w5500.h" 
+=======
+//#include "w5500.h" 
+>>>>>>> a3315e0237df01f6e9b2587e6f1657df314fea2e
 #include "mqtt_client.h"
 #include "esp_http_server.h"
 #include "esp_eth_mac.h"
