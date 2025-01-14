@@ -16,26 +16,23 @@
 #include "nvs_flash.h"
 #include "driver/spi_master.h"
 #include "esp_log.h"
-<<<<<<< HEAD
-#include "w5500.h" 
-=======
-//#include "w5500.h" 
->>>>>>> a3315e0237df01f6e9b2587e6f1657df314fea2e
 #include "mqtt_client.h"
-#include "esp_http_server.h"
 #include "esp_eth_mac.h"
-
-
-//#include <PubSubClient.h>
-#include "mqtt_client_priv.h"
-#include "mqtt_msg.h"
-#include "mqtt_outbox.h"
+#include "esp_eth_phy.h"
 
 #include "globals.h"
 #include "defines.h"
 #include "IR_Send.h"
 #include "SW_Function.h"
 
+static const char *TAG = "mqtt_example";
+
+static void log_error_if_nonzero(const char *message, int error_code)
+{
+    if (error_code != 0) {
+        ESP_LOGE(TAG, "Last error %s: 0x%x", message, error_code);
+    }
+}
 
 //HINT: Function esp_eth_mac_new_esp32() has been refactored to accept device specific configuration and MAC specific configuration.
 //Please refer to the Ethernet section of Networking migration guide for more details.
@@ -343,6 +340,89 @@ void IRAM_ATTR ISR_1_Einfahrt(void* arg)
 
 }
 
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
+{
+    ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32 "", base, event_id);
+    esp_mqtt_event_handle_t event = event_data;
+    esp_mqtt_client_handle_t client = event->client;
+    int msg_id;
+    switch ((esp_mqtt_event_id_t)event_id) {
+    case MQTT_EVENT_CONNECTED:
+        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        msg_id = esp_mqtt_client_publish(client, "/topic/qos1", "data_3", 0, 1, 0);
+        ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+
+        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
+        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+
+        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
+        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+
+        msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
+        ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
+        break;
+    case MQTT_EVENT_DISCONNECTED:
+        ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+        break;
+
+    case MQTT_EVENT_SUBSCRIBED:
+        ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+        msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "data", 0, 0, 0);
+        ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+        break;
+    case MQTT_EVENT_UNSUBSCRIBED:
+        ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
+        break;
+    case MQTT_EVENT_PUBLISHED:
+        ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+        break;
+    case MQTT_EVENT_DATA:
+        ESP_LOGI(TAG, "MQTT_EVENT_DATA");
+        printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+        printf("DATA=%.*s\r\n", event->data_len, event->data);
+        break;
+    case MQTT_EVENT_ERROR:
+        ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
+        if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
+            log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
+            log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
+            log_error_if_nonzero("captured as transport's socket errno",  event->error_handle->esp_transport_sock_errno);
+            ESP_LOGI(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
+
+        }
+        break;
+    default:
+        ESP_LOGI(TAG, "Other event id:%d", event->event_id);
+        break;
+    }
+}
+
+// GIT 
+// https://github.com/espressif/esp-idf/blob/master/examples/protocols/mqtt/tcp/main/app_main.c
+
+void mqtt_app_start(void) {
+
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    // setup MQTT
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    esp_mqtt_client_config_t mqtt_cfg = {
+      .broker.address.uri = "mqtts://mqtt.example.com:8883",
+      .credentials.username = "user",
+      .credentials.authentication.password = "pass",
+      .credentials.client_id = "esp32_client",
+      .session.last_will.topic = "/lwt",
+      .session.last_will.msg = "offline",
+      .session.last_will.qos = 1,
+      .session.last_will.retain = 1};
+    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    esp_mqtt_client_start(client);  // Start the MQTT client    
+}
+
+void mqtt_task(void *pvParameters) {
+    mqtt_app_start();
+    vTaskDelete(NULL);
+}
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -352,7 +432,7 @@ void app_main(void)
 {
 
     ////////////////////////////////////////////////////////////////////////////////////////////
-    // TCP setup
+    // W5500 / TCP setup
     ////////////////////////////////////////////////////////////////////////////////////////////
     // Initialize TCP/IP network interface (should be called only once in application)
     ESP_ERROR_CHECK(esp_netif_init());
@@ -404,58 +484,12 @@ void app_main(void)
     esp_eth_handle_t eth_handle = NULL;
     ESP_ERROR_CHECK(esp_eth_driver_install(&config, &eth_handle));
 
-    PubSubClient client(eth_handle);
-
-    //==============================================================
+    // PubSubClient client(eth_handle);
 
     esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
     esp_netif_t *eth_netif = esp_netif_new(&netif_cfg);
     esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle));
 
-    // Initialize the W5500
-    // ret = w5500_init(spi_handle);
-    ///if (ret != ESP_OK) {
-    ///    ESP_LOGE(TAG, "Failed to initialize W5500");
-    ///    return;
-    ///}
-
-    ///ESP_LOGI(TAG, "W5500 initialized successfully");    
-
-    // Initialize Ethernet driver
-    ///eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
-    //eth_esp32_spi_config_t spi_config = ETH_ESP32_SPI_DEFAULT_CONFIG(spi_handle);
-    ///spi_config.int_gpio_num = PIN_SPI_INT;
-    ///spi_config.phy_reset_gpio_num = PIN_SPI_RST;
-    ///eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
-    ///phy_config.phy_addr = 1;
-    ///phy_config.reset_gpio_num = PIN_SPI_RST;
-    ///esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&mac_config);
-    ///esp_eth_phy_t *phy = esp_eth_phy_new_w5500(&phy_config);
-    ///esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
-    ///esp_eth_handle_t eth_handle = NULL;
-    ///ESP_ERROR_CHECK(esp_eth_driver_install(&config, &eth_handle));
-
-    // https://github.com/espressif/esp-idf/blob/master/examples/ethernet/README.md
-
-    // Initialize Ethernet
-    // eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
-    // mac_config.rx_task_prio
-    // esp_eth_mac_t* mac = esp_eth_mac_new_esp32(&mac_config);
-
-    // esp_eth_phy_t* phy = esp_eth_phy_new_lan87xx(&ETH_PHY_LAN8720_DEFAULT_CONFIG);
-    // esp_eth_config_t eth_config = ETH_DEFAULT_CONFIG(mac, phy);
-    // esp_eth_handle_t eth_handle = NULL;
-    // esp_eth_driver_install(&eth_config, &eth_handle);
-    // esp_eth_start(eth_handle);
-
-    // Example: Print MAC address
-    // uint8_t mac_addr[6];
-    //  esp_eth_get_mac(eth_handle, mac_addr);
-    // ESP_LOGI(TAG, "MAC Address: %02X:%02X:%02X:%02X:%02X:%02X",
-    //          mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-
-
- 
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -485,14 +519,6 @@ void app_main(void)
       .name = "TIMER_MAIN2"};
     esp_timer_handle_t ISR_MAIN2;
     ESP_ERROR_CHECK(esp_timer_create(&main1_timer_args, &ISR_MAIN2));
-
-    //gpio_config_t io_conf = {
-    //    .intr_type = GPIO_INTR_POSEDGE, // Interrupt on high level
-    //    .pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1)|(1ULL << GPIO12_I_IN_ISR_2)|(1ULL << GPIO15_O_SPI_CS)|(1ULL << GPIO35_I_SUB2_ISR_9)|(1ULL << GPIO17_I_HALT1_ISR_4)|(1ULL << GPIO34_I_HALT2_ISR_5)|(1ULL << GPIO03_I_MAIN_ISR_1)|(1ULL << GPIO26_I_MAIN2_ISR7)|(1ULL << GPIO33_I_BUTTON_ISR8), // Bit mask of the pin
-    //    .mode = GPIO_MODE_INPUT, // Set as input mode
-    //    .pull_up_en = GPIO_PULLUP_DISABLE, // Disable pull-up
-    //    .pull_down_en = GPIO_PULLUP_ENABLE // Disable pull-down
-    //};
 
     gpio_config_t io_conf;
 
@@ -554,7 +580,7 @@ void app_main(void)
 
     // configure GPIO26_I_MAIN2_ISR7 
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
-    io_conf.pin_bit_mask = (1ULL << GPIO26_I_MAIN2_ISR7);
+    io_conf.pin_bit_mask = (1ULL << GPIO36_I_MAIN2_ISR7);
     io_conf.mode         = GPIO_MODE_INPUT;      
     io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
@@ -562,7 +588,7 @@ void app_main(void)
 
     // Configure GPIO33_I_BUTTON_ISR8
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
-    io_conf.pin_bit_mask = (1ULL << GPIO33_I_BUTTON_ISR8);
+    io_conf.pin_bit_mask = (1ULL << GPIO39_I_BUTTON_ISR8);
     io_conf.mode         = GPIO_MODE_INPUT;
     io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
@@ -638,16 +664,16 @@ void app_main(void)
 
     // ISR #7 - Main2
     //intr_handle_t ISR_7;
-    gpio_isr_handler_add(GPIO26_I_MAIN2_ISR7, ISR_7_MAIN2, (void*)GPIO26_I_MAIN2_ISR7);
-    esp_err_t ISR_7_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_7_MAIN2, (void*) GPIO26_I_MAIN2_ISR7, &ISR_7);
+    gpio_isr_handler_add(GPIO36_I_MAIN2_ISR7, ISR_7_MAIN2, (void*)GPIO36_I_MAIN2_ISR7);
+    esp_err_t ISR_7_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_7_MAIN2, (void*) GPIO36_I_MAIN2_ISR7, &ISR_7);
     if (ISR_7_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_7_err));
     }
 
     // ISR #8 - button start bus
     //intr_handle_t ISR_8;
-    gpio_isr_handler_add(GPIO33_I_BUTTON_ISR8, ISR_8_BUTTON, (void*)GPIO33_I_BUTTON_ISR8);
-    esp_err_t ISR_8_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_8_BUTTON, (void*) GPIO33_I_BUTTON_ISR8, &ISR_8);
+    gpio_isr_handler_add(GPIO39_I_BUTTON_ISR8, ISR_8_BUTTON, (void*)GPIO39_I_BUTTON_ISR8);
+    esp_err_t ISR_8_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_8_BUTTON, (void*) GPIO39_I_BUTTON_ISR8, &ISR_8);
     if (ISR_8_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_8_err));
     }
@@ -701,6 +727,8 @@ void app_main(void)
     xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_3_SUB1",     2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_2_IN",       2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_1_Einfahrt", 2048, NULL, 5, NULL, 0);   
+
+    xTaskCreatePinnedToCore(mqtt_task, "mqtt_task", 4096, NULL, 5, NULL, 1); // Pin to core 1
 
 
     // Set the GPIO pin high
