@@ -31,6 +31,16 @@
 #define GPIO13_O_SPI_MOSI     13  // Ethernet Anbindung
 #define GPIO14_O_SPI_SCK      11  // Ethernet Anbindung
 
+// https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
+
+//ESP32	                                w5500
+//D18 / GPIO15                          CS
+//D11 / GPIO14                          SCK
+//D12 / GPIO12                          MISO
+//D13 / GPIO 	                                MOSI
+//3.3v                                  (better with external 200mha)	VCC
+//GND	                                GND
+
 // 
 // GPIO00
 // GPIO01
