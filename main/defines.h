@@ -25,11 +25,11 @@
 #define GPIO39_I_BUTTON_ISR8   4  // ISR_8 Taste Bus start
 
 // ethernet
-#define GPIO04_O_INTERRUPT    20  // Ethernet Anbindung
-#define GPIO15_O_SPI_CS       18  // Ethernet Anbindung
-#define GPIO12_I_SPI_MISO     12  // Ethernet Anbindung
-#define GPIO13_O_SPI_MOSI     13  // Ethernet Anbindung
-#define GPIO14_O_SPI_SCK      11  // Ethernet Anbindung
+#define GPIO33_O_INTERRUPT     8  // Ethernet Anbindung - INTERRUPT
+#define GPIO23_O_SPI_CS       37  // Ethernet Anbindung - SPI_CS
+#define GPIO15_I_SPI_MISO     13  // Ethernet Anbindung - SPI_MISO
+#define GPIO13_O_SPI_MOSI     15  // Ethernet Anbindung - SPI_MOSI
+#define GPIO14_O_SPI_SCK      12  // Ethernet Anbindung - SPI_SCK
 
 // https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
 
@@ -89,21 +89,21 @@
 //10	  17    x	         x	    ----- connected to the integrated SPI flash
 //11	  18    x	         x	    ----- connected to the integrated SPI flash
 //12	  13    OK	        OK	    ISR_2 Erkennung Einfahrt                   ----      boot fails if pulled high, strapping pin
-//13	  15    OK	        OK	                                               ----
-//14	  12    OK	        OK	                                               ----      outputs PWM signal at boot
-//15	  23    OK	        OK	                                               ----      outputs PWM signal at boot, strapping pin
+//13	  15    OK	        OK	    Ethernet Anbindung - SPI_MOSI              ----
+//14	  12    OK	        OK	    Ethernet Anbindung - SPI_SCK               ----      outputs PWM signal at boot
+//15	  23    OK	        OK	    Ethernet Anbindung - SPI_MISO              ----      outputs PWM signal at boot, strapping pin
 //16	  27    OK	        OK	    Haltestelle 1 Blinker aus/an, stop/start   ----
 //17	  28    OK	        OK	    ISR_4 Haltestelle 1                        ----
 //18	  38    OK	        OK	    Weiche Sub 1                               ----
 //19	  31    OK	        OK	    ISR_3 Erkennung Sub 1                      ----
 //21	  33    OK	        OK	    Haltestelle 2 Blinker aus/an, stop/start   ----
 //22	  36    OK	        OK	    ISR_6 Hauptstrecke Belegtmelder Sub1       ----
-//23	  37    OK	        OK	                                               ----
+//23	  37    OK	        OK	    Ethernet Anbindung - SPI_CS                ----
 //25	   9    OK	        OK	    Stopp Sub 1 Ausfahrt Hauptstrecke          ----
 //26	  10    OK	        OK	                                               ----
 //27	  11    OK	        OK	    Stopp Sub 2 Ausfahrt Hauptstrecke          ----
 //32	   7    OK	        OK	    Hauptstrecke Blinker aus                   ----
-//33	   8    OK	        OK	                                               ----
+//33	   8    OK	        OK	    Ethernet Anbindung - INTERRUPT             ----
 //34	   5    OK		            ISR_5 Haltestelle 2                        ----        input only
 //35	   6    OK		            ISR_9 Erkennung Sub 2                      ----        input only
 //36	   3    OK		            ISR_7 Hauptstrecke Belegtmelder Sub2       ----        input only

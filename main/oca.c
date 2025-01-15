@@ -444,7 +444,7 @@ void app_main(void)
 
     // Initialize SPI bus
     spi_bus_config_t buscfg = {
-        .miso_io_num = GPIO12_I_SPI_MISO,
+        .miso_io_num = GPIO15_I_SPI_MISO,
         .mosi_io_num = GPIO13_O_SPI_MOSI,
         .sclk_io_num = GPIO14_O_SPI_SCK,
         .quadwp_io_num = -1,
@@ -462,7 +462,7 @@ void app_main(void)
         .cs_ena_pretrans = 0,
         .cs_ena_posttrans = 0,
         .clock_speed_hz = 1 * 1000 * 1000,
-        .spics_io_num = GPIO15_O_SPI_CS,
+        .spics_io_num = GPIO23_O_SPI_CS,
         .flags = 0,
         .queue_size = 1,
     };
@@ -594,9 +594,9 @@ void app_main(void)
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
     gpio_config(&io_conf);
 
-    // configure GPIO12_I_SPI_MISO 
+    // configure GPIO15_I_SPI_MISO 
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
-    io_conf.pin_bit_mask = (1ULL << GPIO12_I_SPI_MISO);
+    io_conf.pin_bit_mask = (1ULL << GPIO15_I_SPI_MISO);
     io_conf.mode         = GPIO_MODE_INPUT;      
     io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
@@ -622,8 +622,8 @@ void app_main(void)
 
     // ISR #3 - Sub1
     //intr_handle_t ISR_3;
-    gpio_isr_handler_add(GPIO15_O_SPI_CS, ISR_3_SUB1, (void*)GPIO15_O_SPI_CS);
-    esp_err_t ISR_3_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_3_SUB1, (void*) GPIO15_O_SPI_CS, &ISR_3);
+    gpio_isr_handler_add(GPIO19_I_SUB1_ISR_3, ISR_3_SUB1, (void*)GPIO19_I_SUB1_ISR_3);
+    esp_err_t ISR_3_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_3_SUB1, (void*) GPIO19_I_SUB1_ISR_3, &ISR_3);
     if (ISR_3_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_3_err));
     }
@@ -696,17 +696,40 @@ void app_main(void)
     // dcc signal
     esp_rom_gpio_pad_select_gpio(GPIO02_O_MAIN_BLINKER);  gpio_set_direction(GPIO02_O_MAIN_BLINKER, GPIO_MODE_OUTPUT);
     esp_rom_gpio_pad_select_gpio(GPIO05_O_SUB1_BLINKER);  gpio_set_direction(GPIO05_O_SUB1_BLINKER, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO16_O_SUB1_EFFEKT);   gpio_set_direction(GPIO16_O_SUB1_EFFEKT, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO21_O_SUB2_EFFEKT);   gpio_set_direction(GPIO21_O_SUB2_EFFEKT, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO16_O_SUB1_EFFEKT);   gpio_set_direction(GPIO16_O_SUB1_EFFEKT,  GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO21_O_SUB2_EFFEKT);   gpio_set_direction(GPIO21_O_SUB2_EFFEKT,  GPIO_MODE_OUTPUT);
     esp_rom_gpio_pad_select_gpio(GPIO32_O_MAIN_BLINKER);  gpio_set_direction(GPIO32_O_MAIN_BLINKER, GPIO_MODE_OUTPUT);
 
     // straight signal
-    esp_rom_gpio_pad_select_gpio(GPIO04_O_MAIN_WEICHE);   gpio_set_direction(GPIO04_O_MAIN_WEICHE, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO18_O_SUB1_WEICHE);   gpio_set_direction(GPIO18_O_SUB1_WEICHE, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO25_O_SUB1_STOP);     gpio_set_direction(GPIO25_O_SUB1_STOP, GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO27_O_SUB2_STOP);     gpio_set_direction(GPIO27_O_SUB2_STOP, GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO04_O_MAIN_WEICHE);   gpio_set_direction(GPIO04_O_MAIN_WEICHE,  GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO18_O_SUB1_WEICHE);   gpio_set_direction(GPIO18_O_SUB1_WEICHE,  GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO25_O_SUB1_STOP);     gpio_set_direction(GPIO25_O_SUB1_STOP,    GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO27_O_SUB2_STOP);     gpio_set_direction(GPIO27_O_SUB2_STOP,    GPIO_MODE_OUTPUT);
 
-/*
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    // define all input pins
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    esp_rom_gpio_pad_select_gpio(GPIO03_I_MAIN_ISR_1);    gpio_set_direction(GPIO03_I_MAIN_ISR_1,  GPIO_MODE_INPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO12_I_IN_ISR_2);      gpio_set_direction(GPIO12_I_IN_ISR_2,    GPIO_MODE_INPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO19_I_SUB1_ISR_3);    gpio_set_direction(GPIO19_I_SUB1_ISR_3,  GPIO_MODE_INPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO35_I_SUB2_ISR_9);    gpio_set_direction(GPIO35_I_SUB2_ISR_9,  GPIO_MODE_INPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO17_I_HALT1_ISR_4);   gpio_set_direction(GPIO17_I_HALT1_ISR_4, GPIO_MODE_INPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO34_I_HALT2_ISR_5);   gpio_set_direction(GPIO34_I_HALT2_ISR_5, GPIO_MODE_INPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO22_I_MAIN1_ISR6);    gpio_set_direction(GPIO22_I_MAIN1_ISR6,  GPIO_MODE_INPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO36_I_MAIN2_ISR7);    gpio_set_direction(GPIO36_I_MAIN2_ISR7,  GPIO_MODE_INPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO39_I_BUTTON_ISR8);   gpio_set_direction(GPIO39_I_BUTTON_ISR8, GPIO_MODE_INPUT);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    // define ethernet pins
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    esp_rom_gpio_pad_select_gpio(GPIO33_O_INTERRUPT);     gpio_set_direction(GPIO33_O_INTERRUPT,  GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO23_O_SPI_CS);        gpio_set_direction(GPIO23_O_SPI_CS,     GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO13_O_SPI_MOSI);      gpio_set_direction(GPIO13_O_SPI_MOSI,   GPIO_MODE_OUTPUT);
+    esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_INPUT);
+
+
+    /*
     xTaskCreatePinnedToCore(IR_Blinker_rechts_ein, "IR_Blinker_rechts_ein", 2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(IR_Blinker_links_ein, "IR_Blinker_links_ein",  2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(IR_Blinker_aus, "IR_Blinker_aus",  2048, NULL, 5, NULL, 0);
@@ -717,17 +740,18 @@ void app_main(void)
     xTaskCreatePinnedToCore(SW_Main, "SW_Main", 2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(SW_Sub1, "SW_Sub1", 2048, NULL, 5, NULL, 0);
 */
-    //  pin all to core "0"
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_8_BUTTON",   2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_7_MAIN2",    2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_6_MAIN1",    2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_5_HALT2",    2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_4_HALT1",    2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_9_SUB2",     2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_3_SUB1",     2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_2_IN",       2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_8_BUTTON, "ISR_1_Einfahrt", 2048, NULL, 5, NULL, 0);   
+    //  pin to core "0"
+    xTaskCreatePinnedToCore(ISR_8_BUTTON,   "ISR_8_BUTTON",   2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_7_MAIN2,    "ISR_7_MAIN2",    2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_6_MAIN1,    "ISR_6_MAIN1",    2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_5_HALT2,    "ISR_5_HALT2",    2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_4_HALT1,    "ISR_4_HALT1",    2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_9_SUB2,     "ISR_9_SUB2",     2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_3_SUB1,     "ISR_3_SUB1",     2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_2_IN,       "ISR_2_IN",       2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_1_Einfahrt, "ISR_1_Einfahrt", 2048, NULL, 5, NULL, 0);
 
+    //  pin to core "1"
     xTaskCreatePinnedToCore(mqtt_task, "mqtt_task", 4096, NULL, 5, NULL, 1); // Pin to core 1
 
 
