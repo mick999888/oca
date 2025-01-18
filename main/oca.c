@@ -452,6 +452,9 @@ void app_main(void)
         .max_transfer_sz = 4096,
     };
 
+    ESP_ERROR_CHECK(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    spi_device_handle_t spi_handle; 
+
     // Configure SPI device interface
     spi_device_interface_config_t devcfg = {
         .command_bits = 0,
@@ -463,12 +466,11 @@ void app_main(void)
         .cs_ena_posttrans = 0,
         .clock_speed_hz = 1 * 1000 * 1000,
         .spics_io_num = GPIO23_O_SPI_CS,
+        .spics
         .flags = 0,
         .queue_size = 1,
     };
     
-    ESP_ERROR_CHECK(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
-    spi_device_handle_t spi_handle;
     ESP_ERROR_CHECK(spi_bus_add_device(HSPI_HOST, &devcfg, &spi_handle));
 
     eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
@@ -723,7 +725,7 @@ void app_main(void)
     // define ethernet pins
     ////////////////////////////////////////////////////////////////////////////////////////////
     esp_rom_gpio_pad_select_gpio(GPIO33_O_INTERRUPT);     gpio_set_direction(GPIO33_O_INTERRUPT,  GPIO_MODE_OUTPUT);
-    esp_rom_gpio_pad_select_gpio(GPIO23_O_SPI_CS);        gpio_set_direction(GPIO23_O_SPI_CS,     GPIO_MODE_OUTPUT);
+    //esp_rom_gpio_pad_select_gpio(GPIO23_O_SPI_CS);        gpio_set_direction(GPIO23_O_SPI_CS,     GPIO_MODE_OUTPUT);
     esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_OUTPUT);
     esp_rom_gpio_pad_select_gpio(GPIO13_O_SPI_MOSI);      gpio_set_direction(GPIO13_O_SPI_MOSI,   GPIO_MODE_OUTPUT);
     esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_INPUT);
