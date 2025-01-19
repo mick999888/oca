@@ -3,33 +3,33 @@
 
 
 // output
-#define GPIO02_O_MAIN_BLINKER 24  // Blinker Haupteinfahrt
-#define GPIO04_O_MAIN_WEICHE  26  // Weiche Haupteinfahrt
-#define GPIO05_O_SUB1_BLINKER 29  // Blinker Sub 1
-#define GPIO18_O_SUB1_WEICHE  38  // Weiche Sub 1
-#define GPIO16_O_SUB1_EFFEKT  27  // Haltestelle 1 Blinker aus/an, stop/start
-#define GPIO21_O_SUB2_EFFEKT  33  // Haltestelle 2 Blinker aus/an, stop/start
-#define GPIO25_O_SUB1_STOP     9  // Stopp Sub 1 Ausfahrt Hauptstrecke
-#define GPIO27_O_SUB2_STOP    11  // Stopp Sub 2 Ausfahrt Hauptstrecke
-#define GPIO32_O_MAIN_BLINKER  7  // Hauptstrecke Blinker aus
+#define GPIO02_O_MAIN_BLINKER  2 //24  // Blinker Haupteinfahrt
+#define GPIO04_O_MAIN_WEICHE   4 //26  // Weiche Haupteinfahrt
+#define GPIO05_O_SUB1_BLINKER  5 //29  // Blinker Sub 1
+#define GPIO18_O_SUB1_WEICHE  18 //38  // Weiche Sub 1
+#define GPIO16_O_SUB1_EFFEKT  16 //27  // Haltestelle 1 Blinker aus/an, stop/start
+#define GPIO21_O_SUB2_EFFEKT  21 //33  // Haltestelle 2 Blinker aus/an, stop/start
+#define GPIO25_O_SUB1_STOP    25 // 9  // Stopp Sub 1 Ausfahrt Hauptstrecke
+#define GPIO27_O_SUB2_STOP    27 //11  // Stopp Sub 2 Ausfahrt Hauptstrecke
+#define GPIO32_O_MAIN_BLINKER 32 //7  // Hauptstrecke Blinker aus
 
 // input
-#define GPIO03_I_MAIN_ISR_1   34  // ISR_1 Erkennung Haupteinfahrt 
-#define GPIO12_I_IN_ISR_2     13  // ISR_2 Erkennung Einfahrt
-#define GPIO19_I_SUB1_ISR_3   31  // ISR_3 Erkennung Sub 1
-#define GPIO35_I_SUB2_ISR_9    5  // ISR_9 Erkennung Sub 2
-#define GPIO17_I_HALT1_ISR_4  28  // ISR_4 Haltestelle 1
-#define GPIO34_I_HALT2_ISR_5   5  // ISR_5 Haltestelle 2
-#define GPIO22_I_MAIN1_ISR6   36  // ISR_6 Hauptstrecke Belegtmelder Sub1 
-#define GPIO36_I_MAIN2_ISR7    3  // ISR_7 Hauptstrecke Belegtmelder Sub2
-#define GPIO39_I_BUTTON_ISR8   4  // ISR_8 Taste Bus start
+#define GPIO03_I_MAIN_ISR_1    3 //34  // ISR_1 Erkennung Haupteinfahrt 
+#define GPIO12_I_IN_ISR_2     12 //13  // ISR_2 Erkennung Einfahrt
+#define GPIO19_I_SUB1_ISR_3   19 //31  // ISR_3 Erkennung Sub 1
+#define GPIO35_I_SUB2_ISR_9   35 // 5  // ISR_9 Erkennung Sub 2
+#define GPIO17_I_HALT1_ISR_4  17 //28  // ISR_4 Haltestelle 1
+#define GPIO34_I_HALT2_ISR_5  34 // 5  // ISR_5 Haltestelle 2
+#define GPIO22_I_MAIN1_ISR6   22 //36  // ISR_6 Hauptstrecke Belegtmelder Sub1 
+#define GPIO36_I_MAIN2_ISR7   36 //3  // ISR_7 Hauptstrecke Belegtmelder Sub2
+#define GPIO39_I_BUTTON_ISR8  39 //4  // ISR_8 Taste Bus start
 
 // ethernet
-#define GPIO33_O_INTERRUPT     8  // Ethernet Anbindung - INTERRUPT
-#define GPIO23_O_SPI_CS       37  // Ethernet Anbindung - SPI_CS
-#define GPIO15_I_SPI_MISO     13  // Ethernet Anbindung - SPI_MISO
-#define GPIO13_O_SPI_MOSI     15  // Ethernet Anbindung - SPI_MOSI
-#define GPIO14_O_SPI_SCK      12  // Ethernet Anbindung - SPI_SCK
+#define GPIO33_O_INTERRUPT    33 // 8  // Ethernet Anbindung - INTERRUPT
+#define GPIO23_O_SPI_CS       23 //37  // Ethernet Anbindung - SPI_CS
+#define GPIO15_I_SPI_MISO     15 //13  // Ethernet Anbindung - SPI_MISO
+#define GPIO13_O_SPI_MOSI     13 //15  // Ethernet Anbindung - SPI_MOSI
+#define GPIO14_O_SPI_SCK      14 //14 // Ethernet Anbindung - SPI_SCK
 
 // https://randomnerdtutorials.com/esp32-pinout-reference-gpios/
 
