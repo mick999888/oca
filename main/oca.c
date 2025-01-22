@@ -19,6 +19,7 @@
 #include "mqtt_client.h"
 #include "esp_eth_mac.h"
 #include "esp_eth_phy.h"
+#include "rtc_wdt.h"
 
 #include "globals.h"
 #include "defines.h"
@@ -62,6 +63,7 @@ esp_timer_handle_t ISR_MAIN2;
 // Interrupt routines
 ////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
 void IRAM_ATTR ISR_TIMER_MAIN1(void* arg)
 {
   i_2_IN    = 0;
@@ -150,7 +152,7 @@ void IRAM_ATTR ISR_5_HALT2(void* arg) // Halt2
 	IR_Blinker_aus();
 	IR_Stop();
 
-	//ESP_ERROR_CHECK(esp_timer_start_periodic(ISR_SUB1, 6000000));
+	//ESP_ERROR_CHECK_WITHOUT_ABORT(esp_timer_start_periodic(ISR_SUB1, 6000000));
 	esp_intr_disable(ISR_5); // save CPU load
     esp_intr_disable(ISR_9); // save CPU load
 	esp_timer_start_periodic(ISR_SUB2, 6000000); // 1 min 
@@ -427,18 +429,24 @@ void mqtt_task(void *pvParameters) {
 // Main
 ////////////////////////////////////////////////////////////////////////////////////////////
 
+*/
 
 void app_main(void) 
 {
 
+    rtc_wdt_protect_off(); 
+    rtc_wdt_set_stage(RTC_WDT_STAGE0, RTC_WDT_STAGE_ACTION_RESET_SYSTEM);
+    rtc_wdt_set_time(RTC_WDT_STAGE0, 1000);
+    rtc_wdt_enable();
+    rtc_wdt_protect_on();
     ////////////////////////////////////////////////////////////////////////////////////////////
     // W5500 / TCP setup
     ////////////////////////////////////////////////////////////////////////////////////////////
     // Initialize TCP/IP network interface (should be called only once in application)
-    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_init());
 
     // Create default event loop that running in background
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_event_loop_create_default());
 
     esp_err_t ret;
 
@@ -452,7 +460,7 @@ void app_main(void)
         .max_transfer_sz = 4096,
     };
 
-    ESP_ERROR_CHECK(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
     spi_device_handle_t spi_handle; 
 
     // Configure SPI device interface
@@ -469,8 +477,8 @@ void app_main(void)
         .flags = 0,
         .queue_size = 1,
     };
-    
-    ESP_ERROR_CHECK(spi_bus_add_device(HSPI_HOST, &devcfg, &spi_handle));
+  /*  
+    ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_add_device(HSPI_HOST, &devcfg, &spi_handle));
 
     eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
     eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
@@ -478,18 +486,22 @@ void app_main(void)
     phy_config.reset_gpio_num = -1;
 
     eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(-1,1);
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_eth_mac_new_w5500(&w5500_config, &mac_config));
     esp_eth_mac_t *mac = esp_eth_mac_new_w5500(&w5500_config, &mac_config);
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_eth_phy_new_w5500(&phy_config));
     esp_eth_phy_t *phy = esp_eth_phy_new_w5500(&phy_config);
+    
 
     esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
     esp_eth_handle_t eth_handle = NULL;
-    ESP_ERROR_CHECK(esp_eth_driver_install(&config, &eth_handle));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_eth_driver_install(&config, &eth_handle));
 
     // PubSubClient client(eth_handle);
 
     esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_new(&netif_cfg));
     esp_netif_t *eth_netif = esp_netif_new(&netif_cfg);
-    esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)));
 
 
 
@@ -501,25 +513,25 @@ void app_main(void)
       .callback = &ISR_TIMER_SUB1,
       .name = "TIMER_SUB1"};
     esp_timer_handle_t ISR_SUB1;
-    ESP_ERROR_CHECK(esp_timer_create(&sub1_timer_args, &ISR_SUB1));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_timer_create(&sub1_timer_args, &ISR_SUB1));
 
     const esp_timer_create_args_t sub2_timer_args = {
       .callback = &ISR_TIMER_SUB2,
       .name = "TIMER_SUB2"};
     esp_timer_handle_t ISR_SUB2;
-    ESP_ERROR_CHECK(esp_timer_create(&sub2_timer_args, &ISR_SUB2));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_timer_create(&sub2_timer_args, &ISR_SUB2));
 
     const esp_timer_create_args_t main1_timer_args = {
       .callback = &ISR_TIMER_MAIN1,
       .name = "TIMER_MAIN1"};
     esp_timer_handle_t ISR_MAIN1;
-    ESP_ERROR_CHECK(esp_timer_create(&main1_timer_args, &ISR_MAIN1));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_timer_create(&main1_timer_args, &ISR_MAIN1));
 
     const esp_timer_create_args_t main2_timer_args = {
       .callback = &ISR_TIMER_MAIN2,
       .name = "TIMER_MAIN2"};
     esp_timer_handle_t ISR_MAIN2;
-    ESP_ERROR_CHECK(esp_timer_create(&main1_timer_args, &ISR_MAIN2));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_timer_create(&main1_timer_args, &ISR_MAIN2));
 
     gpio_config_t io_conf;
 
@@ -730,7 +742,7 @@ void app_main(void)
     esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_INPUT);
 
 
-    /*
+    
     xTaskCreatePinnedToCore(IR_Blinker_rechts_ein, "IR_Blinker_rechts_ein", 2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(IR_Blinker_links_ein, "IR_Blinker_links_ein",  2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(IR_Blinker_aus, "IR_Blinker_aus",  2048, NULL, 5, NULL, 0);
@@ -741,6 +753,8 @@ void app_main(void)
     xTaskCreatePinnedToCore(SW_Main, "SW_Main", 2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(SW_Sub1, "SW_Sub1", 2048, NULL, 5, NULL, 0);
 */
+
+/*
     //  pin to core "0"
     xTaskCreatePinnedToCore(ISR_8_BUTTON,   "ISR_8_BUTTON",   2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_7_MAIN2,    "ISR_7_MAIN2",    2048, NULL, 5, NULL, 0);
@@ -760,7 +774,7 @@ void app_main(void)
     // gpio_set_level(GPIO04_PIN26_O_MAIN_WEICHE, 1);
 
     xMutex = xSemaphoreCreateBinary();
-
+*/
 
     while (1) {
 
