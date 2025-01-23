@@ -19,12 +19,15 @@
 #include "mqtt_client.h"
 #include "esp_eth_mac.h"
 #include "esp_eth_phy.h"
-#include "rtc_wdt.h"
+#include "esp_task_wdt.h"
 
 #include "globals.h"
 #include "defines.h"
 #include "IR_Send.h"
 #include "SW_Function.h"
+
+#define WDT_TIMEOUT_S 5  // Watchdog timeout in seconds
+#define TASK_LIST_BUFFER_SIZE 1024  // Buffer size for task list
 
 static const char *TAG = "mqtt_example";
 
@@ -63,7 +66,6 @@ esp_timer_handle_t ISR_MAIN2;
 // Interrupt routines
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-/*
 void IRAM_ATTR ISR_TIMER_MAIN1(void* arg)
 {
   i_2_IN    = 0;
@@ -97,6 +99,9 @@ void IRAM_ATTR ISR_TIMER_SUB1(void* arg)
        esp_intr_enable(ISR_1);
        esp_intr_enable(ISR_2);   
    }
+
+   // vTaskDelay(1 / portTICK_RATE_MS);
+
 }
 
 void IRAM_ATTR ISR_TIMER_SUB2(void* arg)
@@ -107,8 +112,10 @@ void IRAM_ATTR ISR_TIMER_SUB2(void* arg)
        IR_Start();
        esp_intr_enable(ISR_1);
        esp_intr_enable(ISR_2);   
-
    }
+
+   // vTaskDelay(1 / portTICK_RATE_MS);
+
 }
 
 void IRAM_ATTR ISR_8_BUTTON(void* arg) // Start Knopf
@@ -380,8 +387,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-        printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-        printf("DATA=%.*s\r\n", event->data_len, event->data);
+        ESP_LOGI(TAG, "TOPIC=%.*s\r\n", event->topic_len, event->topic);
+        ESP_LOGI(TAG, "DATA=%.*s\r\n", event->data_len, event->data);
         break;
     case MQTT_EVENT_ERROR:
         ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
@@ -429,16 +436,9 @@ void mqtt_task(void *pvParameters) {
 // Main
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-*/
 
 void app_main(void) 
 {
-
-    rtc_wdt_protect_off(); 
-    rtc_wdt_set_stage(RTC_WDT_STAGE0, RTC_WDT_STAGE_ACTION_RESET_SYSTEM);
-    rtc_wdt_set_time(RTC_WDT_STAGE0, 1000);
-    rtc_wdt_enable();
-    rtc_wdt_protect_on();
     ////////////////////////////////////////////////////////////////////////////////////////////
     // W5500 / TCP setup
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -460,8 +460,8 @@ void app_main(void)
         .max_transfer_sz = 4096,
     };
 
-    ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
-    spi_device_handle_t spi_handle; 
+    //ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    //spi_device_handle_t spi_handle; 
 
     // Configure SPI device interface
     spi_device_interface_config_t devcfg = {
@@ -477,31 +477,31 @@ void app_main(void)
         .flags = 0,
         .queue_size = 1,
     };
-  /*  
-    ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_add_device(HSPI_HOST, &devcfg, &spi_handle));
+    
+    //ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_add_device(HSPI_HOST, &devcfg, &spi_handle));
 
-    eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
-    eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
-    phy_config.phy_addr = 1;
-    phy_config.reset_gpio_num = -1;
+    //eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
+    //eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
+    //phy_config.phy_addr = 1;
+    //phy_config.reset_gpio_num = -1;
 
-    eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(-1,1);
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_eth_mac_new_w5500(&w5500_config, &mac_config));
-    esp_eth_mac_t *mac = esp_eth_mac_new_w5500(&w5500_config, &mac_config);
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_eth_phy_new_w5500(&phy_config));
-    esp_eth_phy_t *phy = esp_eth_phy_new_w5500(&phy_config);
+    //eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(-1,1);
+    //ESP_ERROR_CHECK_WITHOUT_ABORT(esp_eth_mac_new_w5500(&w5500_config, &mac_config));
+    //esp_eth_mac_t *mac = esp_eth_mac_new_w5500(&w5500_config, &mac_config);
+    //ESP_ERROR_CHECK_WITHOUT_ABORT(esp_eth_phy_new_w5500(&phy_config));
+    //esp_eth_phy_t *phy = esp_eth_phy_new_w5500(&phy_config);
     
 
-    esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
-    esp_eth_handle_t eth_handle = NULL;
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_eth_driver_install(&config, &eth_handle));
+    //esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
+    //esp_eth_handle_t eth_handle = NULL;
+    //ESP_ERROR_CHECK_WITHOUT_ABORT(esp_eth_driver_install(&config, &eth_handle));
 
     // PubSubClient client(eth_handle);
 
-    esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_new(&netif_cfg));
-    esp_netif_t *eth_netif = esp_netif_new(&netif_cfg);
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)));
+    //esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
+    //ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_new(&netif_cfg));
+    //esp_netif_t *eth_netif = esp_netif_new(&netif_cfg);
+    //ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)));
 
 
 
@@ -543,6 +543,8 @@ void app_main(void)
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
 
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
+
     // Configure GPIO12_I_IN_ISR_2
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
     io_conf.pin_bit_mask = (1ULL << GPIO12_I_IN_ISR_2);
@@ -550,6 +552,8 @@ void app_main(void)
     io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
     gpio_config(&io_conf);
+
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
 
     // Configure GPIO19_I_SUB1_ISR_3
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
@@ -559,6 +563,8 @@ void app_main(void)
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
     gpio_config(&io_conf);
 
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
+
     // Configure GPIO35_I_SUB2_ISR_9
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
     io_conf.pin_bit_mask = (1ULL << GPIO35_I_SUB2_ISR_9);
@@ -566,6 +572,8 @@ void app_main(void)
     io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
     gpio_config(&io_conf);
+
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
 
     // configure GPIO17_I_HALT1_ISR_4 
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
@@ -575,6 +583,8 @@ void app_main(void)
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
 
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
+
     // Configure GPIO34_I_HALT2_ISR_5
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
     io_conf.pin_bit_mask = (1ULL << GPIO34_I_HALT2_ISR_5);
@@ -582,6 +592,8 @@ void app_main(void)
     io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
     gpio_config(&io_conf);
+
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
 
     // Configure GPIO22_I_MAIN1_ISR6
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
@@ -591,6 +603,8 @@ void app_main(void)
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
     gpio_config(&io_conf);
 
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
+
     // configure GPIO26_I_MAIN2_ISR7 
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
     io_conf.pin_bit_mask = (1ULL << GPIO36_I_MAIN2_ISR7);
@@ -599,6 +613,8 @@ void app_main(void)
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
 
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
+
     // Configure GPIO33_I_BUTTON_ISR8
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
     io_conf.pin_bit_mask = (1ULL << GPIO39_I_BUTTON_ISR8);
@@ -606,6 +622,8 @@ void app_main(void)
     io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;    
     gpio_config(&io_conf);
+
+    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
 
     // configure GPIO15_I_SPI_MISO 
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
@@ -691,17 +709,6 @@ void app_main(void)
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_8_err));
     }
 
-    // clear beginning - set all interrupts online
-    esp_intr_enable(ISR_1);
-    esp_intr_enable(ISR_2);
-    esp_intr_enable(ISR_3);    
-    esp_intr_enable(ISR_4);
-    esp_intr_enable(ISR_5);
-    // esp_intr_enable(ISR_6); Main 1
-    // esp_intr_enable(ISR_7); Main 2   
-    // esp_intr_enable(ISR_8); Button
-    esp_intr_enable(ISR_9);
-
     ////////////////////////////////////////////////////////////////////////////////////////////
     // define all output pins
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -742,7 +749,7 @@ void app_main(void)
     esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_INPUT);
 
 
-    
+    /*
     xTaskCreatePinnedToCore(IR_Blinker_rechts_ein, "IR_Blinker_rechts_ein", 2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(IR_Blinker_links_ein, "IR_Blinker_links_ein",  2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(IR_Blinker_aus, "IR_Blinker_aus",  2048, NULL, 5, NULL, 0);
@@ -753,9 +760,8 @@ void app_main(void)
     xTaskCreatePinnedToCore(SW_Main, "SW_Main", 2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(SW_Sub1, "SW_Sub1", 2048, NULL, 5, NULL, 0);
 */
-
-/*
     //  pin to core "0"
+    
     xTaskCreatePinnedToCore(ISR_8_BUTTON,   "ISR_8_BUTTON",   2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_7_MAIN2,    "ISR_7_MAIN2",    2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_6_MAIN1,    "ISR_6_MAIN1",    2048, NULL, 5, NULL, 0);
@@ -765,24 +771,45 @@ void app_main(void)
     xTaskCreatePinnedToCore(ISR_3_SUB1,     "ISR_3_SUB1",     2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_2_IN,       "ISR_2_IN",       2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_1_Einfahrt, "ISR_1_Einfahrt", 2048, NULL, 5, NULL, 0);
-
+    
+    // clear beginning - set all interrupts online
+    esp_intr_enable(ISR_1);
+    esp_intr_enable(ISR_2);
+    esp_intr_enable(ISR_3);    
+    esp_intr_enable(ISR_4);
+    esp_intr_enable(ISR_5);
+    esp_intr_enable(ISR_6); //Main 1
+    esp_intr_enable(ISR_7); //Main 2   
+    esp_intr_enable(ISR_8); //Button
+    esp_intr_enable(ISR_9);
+        
     //  pin to core "1"
-    xTaskCreatePinnedToCore(mqtt_task, "mqtt_task", 4096, NULL, 5, NULL, 1); // Pin to core 1
+    //xTaskCreatePinnedToCore(mqtt_task, "mqtt_task", 4096, NULL, 5, NULL, 1); // Pin to core 1
 
 
     // Set the GPIO pin high
     // gpio_set_level(GPIO04_PIN26_O_MAIN_WEICHE, 1);
 
     xMutex = xSemaphoreCreateBinary();
-*/
+
+
+    // Buffer to hold the task list
+    char task_list[TASK_LIST_BUFFER_SIZE];
 
     while (1) {
 
-        
+        // Feed the watchdog to prevent it from resetting the task
+        esp_task_wdt_reset();
 
-        //    portDISABLE_INTERRUPTS();
-        //    printf( "%d %d %d", bByte[0], bByte[1], bByte[2]);
-        //    portENABLE_INTERRUPTS();        }
+        // Get the task list
+        //vTaskList(task_list);
+
+        // Print the task list
+        //ESP_LOGI("app_main", "Task List:\n%s", task_list);
+
+        // Simulate some work
+        ESP_LOGI("app_main", "Task is running...");
+        vTaskDelay(pdMS_TO_TICKS(1000));  // Delay for 1 second
 
     }
 }
