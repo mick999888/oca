@@ -20,6 +20,7 @@
 #include "esp_eth_mac.h"
 #include "esp_eth_phy.h"
 #include "esp_task_wdt.h"
+#include "esp_check.h"
 
 #include "globals.h"
 #include "defines.h"
@@ -66,6 +67,7 @@ esp_timer_handle_t ISR_MAIN2;
 // Interrupt routines
 ////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
 void IRAM_ATTR ISR_TIMER_MAIN1(void* arg)
 {
   i_2_IN    = 0;
@@ -242,8 +244,8 @@ void IRAM_ATTR ISR_2_IN(void* arg)  // Einfahrt - Weiche zurücksetzen
 		}
 	}
 }
-
-void IRAM_ATTR ISR_1_Einfahrt(void* arg) 
+*/
+static void IRAM_ATTR ISR_1_Einfahrt(void* args) 
 {
 
     uiCurrentTime = esp_timer_get_time();
@@ -334,11 +336,11 @@ void IRAM_ATTR ISR_1_Einfahrt(void* arg)
 	        // final stop bit
 	        else if ((iCount == 8) && ((iSet_preamble == 0))) {
 		        iCount = 0;	
-				if (xSemaphoreTake(xMutex, 10)) {
+				//if (xSemaphoreTake(xMutex, 10)) {
 				    SW_Main(i_SW_R);   // Hauptstrecke verlassen
 				    iFinalTelegram = 1;
-				    xSemaphoreGive(xMutex);
-			    }
+				//    xSemaphoreGive(xMutex);
+			    //}
 	        }            
 
         }
@@ -346,8 +348,11 @@ void IRAM_ATTR ISR_1_Einfahrt(void* arg)
     }
 
     uiLastInterruptTime = uiCurrentTime;
+    
 
 }
+
+/*
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
@@ -406,8 +411,12 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     }
 }
 
+*/
+
 // GIT 
 // https://github.com/espressif/esp-idf/blob/master/examples/protocols/mqtt/tcp/main/app_main.c
+
+/*
 
 void mqtt_app_start(void) {
 
@@ -432,6 +441,8 @@ void mqtt_task(void *pvParameters) {
     mqtt_app_start();
     vTaskDelete(NULL);
 }
+
+*/
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -508,12 +519,14 @@ void app_main(void)
     ////////////////////////////////////////////////////////////////////////////////////////////
     // define here all ISR routines
     ////////////////////////////////////////////////////////////////////////////////////////////
-
+/*
     const esp_timer_create_args_t sub1_timer_args = {
       .callback = &ISR_TIMER_SUB1,
       .name = "TIMER_SUB1"};
     esp_timer_handle_t ISR_SUB1;
     ESP_ERROR_CHECK_WITHOUT_ABORT(esp_timer_create(&sub1_timer_args, &ISR_SUB1));
+
+
 
     const esp_timer_create_args_t sub2_timer_args = {
       .callback = &ISR_TIMER_SUB2,
@@ -533,6 +546,10 @@ void app_main(void)
     esp_timer_handle_t ISR_MAIN2;
     ESP_ERROR_CHECK_WITHOUT_ABORT(esp_timer_create(&main1_timer_args, &ISR_MAIN2));
 
+*/
+    esp_intr_dump(NULL);
+
+
     gpio_config_t io_conf;
 
     // configure GPIO03_I_MAIN_ISR_1 
@@ -543,8 +560,8 @@ void app_main(void)
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
 
-    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
-
+    //gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
+/*
     // Configure GPIO12_I_IN_ISR_2
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
     io_conf.pin_bit_mask = (1ULL << GPIO12_I_IN_ISR_2);
@@ -632,17 +649,20 @@ void app_main(void)
     io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
-
-    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5); // Use level 5 interrupt
+*/
+    // ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LEVEL5)); // Use level 5 interrupt
+    ESP_ERROR_CHECK(gpio_install_isr_service(0));                    // Use level 5 interrupt
 
     // ISR #1 - Hauptstrecke
     //intr_handle_t ISR_1;
-    gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, (void*)GPIO03_I_MAIN_ISR_1);
-    esp_err_t ISR_1_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_1_Einfahrt, (void*) GPIO03_I_MAIN_ISR_1, &ISR_1);
-    if (ISR_1_err != ESP_OK) {
-        ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_1_err));
-    }
-
+    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, GPIO03_I_MAIN_ISR_1));
+    //  ESP_ERROR_CHECK_WITHOUT_ABORT(esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_1_Einfahrt, (void*) GPIO03_I_MAIN_ISR_1, &ISR_1));
+    
+    //esp_err_t ISR_1_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_1_Einfahrt, (void*) GPIO03_I_MAIN_ISR_1, &ISR_1);
+    //if (ISR_1_err != ESP_OK) {
+    //    ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_1_err));
+    //}
+/*
     // ISR #2 - Eingang
     //intr_handle_t ISR_2;
     gpio_isr_handler_add(GPIO12_I_IN_ISR_2, ISR_2_IN, (void*)GPIO12_I_IN_ISR_2);
@@ -661,7 +681,7 @@ void app_main(void)
 
 
     // ISR #9 - Sub2
-    //intr_handle_t ISR_9;
+    //intr_handle_t ISR_9; 
     gpio_isr_handler_add(GPIO35_I_SUB2_ISR_9, ISR_9_SUB2, (void*)GPIO35_I_SUB2_ISR_9);
     esp_err_t ISR_9_err = esp_intr_alloc(ETS_GPIO_INTR_SOURCE, 0, ISR_9_SUB2, (void*) GPIO35_I_SUB2_ISR_9, &ISR_9);
     if (ISR_9_err != ESP_OK) {
@@ -708,7 +728,7 @@ void app_main(void)
     if (ISR_8_err != ESP_OK) {
         ESP_LOGE("app_main", "Failed to allocate interrupt: %s", esp_err_to_name(ISR_8_err));
     }
-
+*/
     ////////////////////////////////////////////////////////////////////////////////////////////
     // define all output pins
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -761,7 +781,7 @@ void app_main(void)
     xTaskCreatePinnedToCore(SW_Sub1, "SW_Sub1", 2048, NULL, 5, NULL, 0);
 */
     //  pin to core "0"
-    
+  /*  
     xTaskCreatePinnedToCore(ISR_8_BUTTON,   "ISR_8_BUTTON",   2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_7_MAIN2,    "ISR_7_MAIN2",    2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_6_MAIN1,    "ISR_6_MAIN1",    2048, NULL, 5, NULL, 0);
@@ -770,10 +790,12 @@ void app_main(void)
     xTaskCreatePinnedToCore(ISR_9_SUB2,     "ISR_9_SUB2",     2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_3_SUB1,     "ISR_3_SUB1",     2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_2_IN,       "ISR_2_IN",       2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR_1_Einfahrt, "ISR_1_Einfahrt", 2048, NULL, 5, NULL, 0);
+  */    
+    xTaskCreatePinnedToCore(ISR_1_Einfahrt, "ISR_1_Einfahrt", 2048, NULL, 5, NULL, 1);
     
     // clear beginning - set all interrupts online
     esp_intr_enable(ISR_1);
+    /*
     esp_intr_enable(ISR_2);
     esp_intr_enable(ISR_3);    
     esp_intr_enable(ISR_4);
@@ -782,6 +804,7 @@ void app_main(void)
     esp_intr_enable(ISR_7); //Main 2   
     esp_intr_enable(ISR_8); //Button
     esp_intr_enable(ISR_9);
+    */
         
     //  pin to core "1"
     //xTaskCreatePinnedToCore(mqtt_task, "mqtt_task", 4096, NULL, 5, NULL, 1); // Pin to core 1
@@ -790,7 +813,7 @@ void app_main(void)
     // Set the GPIO pin high
     // gpio_set_level(GPIO04_PIN26_O_MAIN_WEICHE, 1);
 
-    xMutex = xSemaphoreCreateBinary();
+    ////xMutex = xSemaphoreCreateBinary();
 
 
     // Buffer to hold the task list
@@ -810,6 +833,7 @@ void app_main(void)
         // Simulate some work
         ESP_LOGI("app_main", "Task is running...");
         vTaskDelay(pdMS_TO_TICKS(1000));  // Delay for 1 second
+        vTaskDelete(NULL);
 
     }
 }
