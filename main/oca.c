@@ -213,39 +213,9 @@ void IRAM_ATTR ISR_3_SUB1(void* arg) // Sub1 Einfahrt
     esp_intr_enable(ISR_4);
 }
 
-void IRAM_ATTR ISR_2_IN(void* arg)  // Einfahrt - Weiche zurücksetzen
-{
-	i_2_IN = 1;
 
-	if (iFinalTelegram == 1) {
-		if (iCountVehicleBlock < 2) {
-
-			switch (iCountVehicleBlock) {
-				case 0:
-				    SW_Sub1(i_SW_R);  // ==> Sub2
-				    break;
-				case 1:
-				    if      ((i_3_SUB1 == 0) && (i_4_HALT1 == 0)) // Sub1 frei -> Einfahrt Sub1
-				        SW_Sub1(i_SW_L);
-					else if ((i_9_SUB2 == 0) && (i_5_HALT2 == 0)) // Sub2 frei -> Einfahrt Sub2
-					    SW_Sub1(i_SW_R);
-					break;
-			}
-
-		    if (xSemaphoreTake(xMutex, 10)) {
-				iCountVehicleBlock++;
-				SW_Main(i_SW_L);       // schalten auf Hauptstrecke
-				iFinalTelegram = 0;
-				if (iCountVehicleBlock == 2) {
-				    esp_intr_disable(ISR_1);
-					esp_intr_disable(ISR_2);
-				}
-				xSemaphoreGive(xMutex);
-			}
-		}
-	}
-}
 */
+
 static void IRAM_ATTR ISR_1_Einfahrt(void* args) 
 {
 
@@ -353,9 +323,93 @@ static void IRAM_ATTR ISR_1_Einfahrt(void* args)
 
 }
 
-void ISR_1_Einfahrt_handler (void* pvParameters)
+static void IRAM_ATTR ISR_2_IN(void* arg)  // Einfahrt - Weiche zurücksetzen
 {
+    i_2_IN = 1;
 
+    if (iFinalTelegram == 1) {
+        if (iCountVehicleBlock < 2) {
+
+            switch (iCountVehicleBlock) {
+            case 0:
+                SW_Sub1(i_SW_R);  // ==> Sub2
+                break;
+            case 1:
+                if ((i_3_SUB1 == 0) && (i_4_HALT1 == 0)) // Sub1 frei -> Einfahrt Sub1
+                    SW_Sub1(i_SW_L);
+                else if ((i_9_SUB2 == 0) && (i_5_HALT2 == 0)) // Sub2 frei -> Einfahrt Sub2
+                    SW_Sub1(i_SW_R);
+                break;
+            }
+
+            if (xSemaphoreTake(xMutex, 10)) {
+                iCountVehicleBlock++;
+                SW_Main(i_SW_L);       // schalten auf Hauptstrecke
+                iFinalTelegram = 0;
+                if (iCountVehicleBlock == 2) {
+                    esp_intr_disable(ISR_1);
+                    esp_intr_disable(ISR_2);
+                }
+                xSemaphoreGive(xMutex);
+            }
+        }
+    }
+}
+
+static void IRAM_ATTR ISR_3_SUB1(void* arg) // Sub1 Einfahrt
+{
+    i_3_SUB1 = 1;
+
+    // falls SUB2 frei ist
+    if (i_9_SUB2 == 0)
+        SW_Sub1(i_SW_R);
+
+    esp_intr_enable(ISR_4);
+}
+
+static void IRAM_ATTR ISR_4_HALT1(void* arg) // Halt1
+{
+    i_4_HALT1 = 1;
+    IR_Blinker_aus();
+    IR_Stop();
+
+    esp_intr_disable(ISR_3); // save CPU load
+    esp_intr_disable(ISR_4); // save CPU load
+    esp_timer_start_periodic(ISR_SUB1, 6000000); // 1 min 
+
+    // full house
+    if ((i_5_HALT2 == 1) && (i_4_HALT1 == 1)) {
+        esp_intr_disable(ISR_1);
+        esp_intr_disable(ISR_2);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//////////// tasks for all interrupts //////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
+
+void ISR_1_Einfahrt_handler(void* pvParameters)
+{
+    gpio_config_t io_conf;
+
+    // configure GPIO12_I_IN_ISR_2
+    io_conf.intr_type = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO12_I_IN_ISR_2);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+
+    //ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO12_I_IN_ISR_2, ISR_1_Einfahrt, GPIO12_I_IN_ISR_2));
+
+    while (1) {
+        vTaskDelay(1);
+    }
+}
+
+void ISR_2_IN_handler (void* pvParameters)
+{
     gpio_config_t io_conf;
 
     // configure GPIO03_I_MAIN_ISR_1 
@@ -366,14 +420,54 @@ void ISR_1_Einfahrt_handler (void* pvParameters)
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
 
-    ESP_ERROR_CHECK(gpio_install_isr_service(0));                    
-    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, GPIO03_I_MAIN_ISR_1));
+    //ESP_ERROR_CHECK(gpio_install_isr_service(0));                    
+    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_2_IN, GPIO03_I_MAIN_ISR_1));
 
     while(1) {
         vTaskDelay(1);
     }
-
 }
+
+void ISR_3_SUB1_handler (void* pvParameters)
+{
+    gpio_config_t io_conf;
+
+    // Configure GPIO19_I_SUB1_ISR_3
+    io_conf.intr_type = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO19_I_SUB1_ISR_3);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+
+    //ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO19_I_SUB1_ISR_3, ISR_2_IN, GPIO19_I_SUB1_ISR_3));
+
+    while (1) {
+        vTaskDelay(1);
+    }
+}
+
+void ISR_4_HALT1_handler(void* pvParameters)
+{
+    gpio_config_t io_conf;
+
+    // configure GPIO17_I_HALT1_ISR_4 
+    io_conf.intr_type = GPIO_INTR_POSEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO17_I_HALT1_ISR_4);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+
+    //ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO17_I_HALT1_ISR_4, ISR_2_IN, GPIO17_I_HALT1_ISR_4));
+
+    while (1) {
+        vTaskDelay(1);
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -426,15 +520,23 @@ void app_main(void)
     esp_rom_gpio_pad_select_gpio(GPIO13_O_SPI_MOSI);      gpio_set_direction(GPIO13_O_SPI_MOSI,   GPIO_MODE_OUTPUT);
     esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_INPUT);
 
+    //  create here tasks
     vTaskDelay (1000/portTICK_PERIOD_MS);
-    xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler", 2048, NULL, 5, NULL, 1);
-    
+    ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler", 2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_2_IN_handler,       "ISR_2_IN_handler",       2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_3_SUB1_handler,     "ISR_3_SUB1_handler", 2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_4_HALT1_handler,    "ISR4_HALT1_handler", 2048, NULL, 5, NULL, 0);
+
+
+
     // clear beginning - set all interrupts online
     esp_intr_enable(ISR_1);
+    esp_intr_enable(ISR_2);
+    esp_intr_enable(ISR_3);
+    esp_intr_enable(ISR_4);
 
     while (1) {
-
         vTaskDelay(1);  
-
     }
 }
