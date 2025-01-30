@@ -21,6 +21,7 @@
 #include "esp_eth_phy.h"
 #include "esp_task_wdt.h"
 #include "esp_check.h"
+#include "rtc_wdt.h"
 
 #include "globals.h"
 #include "defines.h"
