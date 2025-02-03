@@ -574,6 +574,12 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     }
 }
+
+void mqtt_handler(void *pvParameters) {
+    mqtt_app_start();
+    vTaskDelete(NULL);
+    https://github.com/tuanpmt/esp32-mqtt/blob/master/main/app_main.c#L124
+}
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -628,6 +634,8 @@ void app_main(void)
     vTaskDelay (1000/portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    
+    // pin to core "0"
     xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_2_IN_handler,       "ISR_2_IN_handler",         2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_3_SUB1_handler,     "ISR_3_SUB1_handler",       2048, NULL, 5, NULL, 0);
@@ -637,6 +645,9 @@ void app_main(void)
     xTaskCreatePinnedToCore(ISR_7_MAIN2_handler,    "ISR7_MAIN2_handler",       2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_8_BUTTON_handler,   "ISR8_BUTTON_handler",      2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_9_SUB2_handler,     "ISR9_SUB2_handler",        2048, NULL, 5, NULL, 0);
+
+    // pin to core "1"
+    xTaskCreatePinnedToCore(mqtt_handler, "mqtt_handler", 4096, NULL, 5, NULL, 1);
     
 
     // clear beginning - set all interrupts online
