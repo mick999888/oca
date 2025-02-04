@@ -575,10 +575,24 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     }
 }
 
-void mqtt_handler(void *pvParameters) {
-    mqtt_app_start();
+void  mqtt_app_start(void) {
+    esp_mqtt_client_config_t mqtt_cfg = {
+      .broker.address.uri = "mqtts://mqtt.example.com:1883",
+      .credentials.username = "user",
+      .credentials.authentication.password = "pass",
+      .credentials.client_id = "esp32_client",
+      .session.last_will.topic = "/lwt",
+      .session.last_will.msg = "offline",
+      .session.last_will.qos = 1,
+      .session.last_will.retain = 1};
+    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    esp_mqtt_client_start(client);  // Start the MQTT client        
+    
+
     vTaskDelete(NULL);
-    https://github.com/tuanpmt/esp32-mqtt/blob/master/main/app_main.c#L124
+    //https://github.com/tuanpmt/esp32-mqtt/blob/master/main/app_main.c#L124
+    //https://medium.com/gravio-edge-iot-platform/how-to-set-up-a-mosquitto-mqtt-broker-securely-using-client-certificates-82b2aaaef9c8
 }
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Main
@@ -647,7 +661,7 @@ void app_main(void)
     xTaskCreatePinnedToCore(ISR_9_SUB2_handler,     "ISR9_SUB2_handler",        2048, NULL, 5, NULL, 0);
 
     // pin to core "1"
-    xTaskCreatePinnedToCore(mqtt_handler, "mqtt_handler", 4096, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(mqtt_app_start, "mqtt_app_start", 4096, NULL, 5, NULL, 1);
     
 
     // clear beginning - set all interrupts online
@@ -655,6 +669,8 @@ void app_main(void)
     esp_intr_enable(ISR_2);
     esp_intr_enable(ISR_3);
     esp_intr_enable(ISR_4);
+
+    //mqtt_app_start();
 
     while (1) {
         vTaskDelay(1);  
