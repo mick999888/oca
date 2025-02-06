@@ -514,10 +514,47 @@ void ISR_9_SUB2_handler(void* pvParameters)
 		vTaskDelay(1);
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////
+// SPI setup
+////////////////////////////////////////////////////////////////////////////////////////////
+void spi_app_start(void) {
+    // Initialize SPI bus
+    spi_bus_config_t buscfg = {
+        .miso_io_num = GPIO15_I_SPI_MISO,
+        .mosi_io_num = GPIO13_O_SPI_MOSI,
+        .sclk_io_num = GPIO14_O_SPI_SCK,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
+        .max_transfer_sz = 4096,
+    };
+
+    ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    spi_device_handle_t spi_handle; 
+
+    // Configure SPI device interface
+    spi_device_interface_config_t devcfg = {
+        .command_bits = 0,
+        .address_bits = 0,
+        .dummy_bits = 0,
+        .mode = 0,
+        .duty_cycle_pos = 128,
+        .cs_ena_pretrans = 0,
+        .cs_ena_posttrans = 0,
+        .clock_speed_hz = 1 * 1000 * 1000,
+        .spics_io_num = GPIO23_O_SPI_CS,
+        .flags = 0,
+        .queue_size = 1,
+    };
+    
+    ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_add_device(HSPI_HOST, &devcfg, &spi_handle));
+
+    eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
+    eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
+}
 ////////////////////////////////////////////////////////////////////////////////////////////
 // MQTT setup
 ////////////////////////////////////////////////////////////////////////////////////////////
-
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32 "", base, event_id);
@@ -670,7 +707,8 @@ void app_main(void)
     esp_intr_enable(ISR_3);
     esp_intr_enable(ISR_4);
 
-    //mqtt_app_start();
+    spi_app_start();
+    mqtt_app_start();
 
     while (1) {
         vTaskDelay(1);  
