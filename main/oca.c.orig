@@ -458,7 +458,7 @@ void mqtt_app_start(void) {
     esp_mqtt_client_start(client);  // Start the MQTT client    
 }
 
-void mqtt_task(void *pvParameters) {
+void mqtt_handler(void *pvParameters) {
     mqtt_app_start();
     vTaskDelete(NULL);
 }
@@ -471,6 +471,7 @@ void mqtt_task(void *pvParameters) {
 
 void app_main(void) 
 {
+    // https://esp32.com/viewtopic.php?t=35036
     ////////////////////////////////////////////////////////////////////////////////////////////
     // W5500 / TCP setup
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -481,6 +482,10 @@ void app_main(void)
     ESP_ERROR_CHECK_WITHOUT_ABORT(esp_event_loop_create_default());
 
     esp_err_t ret;
+
+    // Initialize Ethernet
+    uint8_t eth_port_cnt = 0;
+
 
     // Initialize SPI bus
     spi_bus_config_t buscfg = {
