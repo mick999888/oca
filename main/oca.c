@@ -31,7 +31,8 @@
 #define TASK_LIST_BUFFER_SIZE 1024  // Buffer size for task list
 
 static const char *TAG_MQTT = "mqtt_example";
-static const char *TAG_ETH = "eth_example";
+static const char *TAG_ETH  = "eth_example";
+static const char *TAG_ISR  = "isr_example";
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -119,6 +120,8 @@ void IRAM_ATTR ISR_TIMER_SUB2(void* arg)
 ////////////////////////////////////////////////////////////////////////////////////////////
 static void IRAM_ATTR ISR_1_Einfahrt(void* args) 
 {
+    ESP_LOGD(TAG_ISR, "ISR_1 high");
+    
     uiCurrentTime = esp_timer_get_time();
     uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
 
@@ -686,6 +689,10 @@ void  mqtt_app_start(void) {
 ////////////////////////////////////////////////////////////////////////////////////////////
 void app_main(void) 
 {
+    esp_log_level_set("*", ESP_LOG_DEBUG);
+    ESP_LOGD(TAG_ISR, "bin da");
+
+
     ////////////////////////////////////////////////////////////////////////////////////////////
     // W5500 / TCP setup
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -756,6 +763,9 @@ void app_main(void)
     esp_intr_enable(ISR_2);
     esp_intr_enable(ISR_3);
     esp_intr_enable(ISR_4);
+
+    esp_log_level_set("*", ESP_LOG_DEBUG);
+    ESP_LOGD(TAG_ISR, "bin da");
 
     spi_app_start();
     mqtt_app_start();
