@@ -120,7 +120,7 @@ void IRAM_ATTR ISR_TIMER_SUB2(void* arg)
 ////////////////////////////////////////////////////////////////////////////////////////////
 static void IRAM_ATTR ISR_1_Einfahrt(void* args) 
 {
-    ESP_LOGD(TAG_ISR, "ISR_1 high");
+    ESP_LOGI(TAG_ISR, "ISR_1 high");
     
     uiCurrentTime = esp_timer_get_time();
     uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
@@ -351,24 +351,25 @@ static void IRAM_ATTR ISR_9_SUB2(void* arg) // Sub2 Einfahrt
 ////////////////////////////////////////////////////////////////////////////////////////////
 //////////// tasks for all interrupts //////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
-
 void ISR_1_Einfahrt_handler(void* pvParameters)
 {
     gpio_config_t io_conf;
 
-    // configure GPIO12_I_IN_ISR_2
+    // configure GPIO03_I_MAIN_ISR_1
     io_conf.intr_type = GPIO_INTR_POSEDGE;
-    io_conf.pin_bit_mask = (1ULL << GPIO12_I_IN_ISR_2);
+    io_conf.pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
 
     //ESP_ERROR_CHECK(gpio_install_isr_service(0));
-    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO12_I_IN_ISR_2, ISR_1_Einfahrt, GPIO12_I_IN_ISR_2));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, GPIO03_I_MAIN_ISR_1));
 
+    ESP_LOGI(TAG_ISR, "ISR 1 handler");
     while (1) {
-        vTaskDelay(1);
+        vTaskDelay (10/portTICK_PERIOD_MS);
+        // vTaskDelay(1);
     }
 }
 
@@ -376,16 +377,16 @@ void ISR_2_IN_handler (void* pvParameters)
 {
     gpio_config_t io_conf;
 
-    // configure GPIO03_I_MAIN_ISR_1 
+    // configure GPIO12_I_IN_ISR_2 
     io_conf.intr_type    = GPIO_INTR_POSEDGE;
-    io_conf.pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1);
+    io_conf.pin_bit_mask = (1ULL << GPIO12_I_IN_ISR_2);
     io_conf.mode         = GPIO_MODE_INPUT;      
     io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
     io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
 
     //ESP_ERROR_CHECK(gpio_install_isr_service(0));                    
-    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_2_IN, GPIO03_I_MAIN_ISR_1));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO12_I_IN_ISR_2, ISR_2_IN, GPIO12_I_IN_ISR_2));
 
     while(1) {
         vTaskDelay(1);
@@ -689,8 +690,8 @@ void  mqtt_app_start(void) {
 ////////////////////////////////////////////////////////////////////////////////////////////
 void app_main(void) 
 {
-    esp_log_level_set("*", ESP_LOG_DEBUG);
-    ESP_LOGD(TAG_ISR, "bin da");
+    esp_log_level_set("TAG_ISR", ESP_LOG_INFO);
+    ESP_LOGI(TAG_ISR, "bin da");
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -739,10 +740,10 @@ void app_main(void)
     esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_INPUT);
 
     //  create here tasks
-    vTaskDelay (1000/portTICK_PERIOD_MS);
+    // vTaskDelay (10/portTICK_PERIOD_MS);
 
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
-    
+
     // pin to core "0"
     xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_2_IN_handler,       "ISR_2_IN_handler",         2048, NULL, 5, NULL, 0);
@@ -755,8 +756,7 @@ void app_main(void)
     xTaskCreatePinnedToCore(ISR_9_SUB2_handler,     "ISR9_SUB2_handler",        2048, NULL, 5, NULL, 0);
 
     // pin to core "1"
-    xTaskCreatePinnedToCore(mqtt_app_start, "mqtt_app_start", 4096, NULL, 5, NULL, 1);
-    
+    // xTaskCreatePinnedToCore(mqtt_app_start, "mqtt_app_start", 4096, NULL, 5, NULL, 1);
 
     // clear beginning - set all interrupts online
     esp_intr_enable(ISR_1);
@@ -764,13 +764,14 @@ void app_main(void)
     esp_intr_enable(ISR_3);
     esp_intr_enable(ISR_4);
 
-    esp_log_level_set("*", ESP_LOG_DEBUG);
-    ESP_LOGD(TAG_ISR, "bin da");
+    // esp_log_level_set("*", ESP_LOG_DEBUG);
+    ESP_LOGI(TAG_ISR, "bin da");
 
-    spi_app_start();
-    mqtt_app_start();
+    //spi_app_start();
+    //mqtt_app_start();
 
-    while (1) {
-        vTaskDelay(1);  
-    }
+    //while (1) {
+    //    vTaskDelay (10/portTICK_PERIOD_MS);
+        // ESP_LOGI(TAG_ISR, "bin da 111");
+    //}
 }
