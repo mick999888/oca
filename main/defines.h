@@ -14,7 +14,7 @@
 #define GPIO32_O_MAIN_BLINKER 32 //7  // Hauptstrecke Blinker aus
 
 // input
-#define GPIO03_I_MAIN_ISR_1    3 //34  // ISR_1 Erkennung Haupteinfahrt 
+#define GPIO03_I_MAIN_ISR_1   3 //34  // ISR_1 Erkennung Haupteinfahrt 
 #define GPIO12_I_IN_ISR_2     12 //13  // ISR_2 Erkennung Einfahrt
 #define GPIO19_I_SUB1_ISR_3   19 //31  // ISR_3 Erkennung Sub 1
 #define GPIO35_I_SUB2_ISR_9   35 // 5  // ISR_9 Erkennung Sub 2

@@ -118,9 +118,10 @@ void IRAM_ATTR ISR_TIMER_SUB2(void* arg)
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Interrupt routines
 ////////////////////////////////////////////////////////////////////////////////////////////
-static void IRAM_ATTR ISR_1_Einfahrt(void* args) 
+static void IRAM_ATTR ISR_1_Einfahrt(void *args) 
 {
-    ESP_LOGI(TAG_ISR, "ISR_1 high");
+    //ESP_LOGI(TAG_ISR, "ISR_1 high");
+    iFinalTelegram = 1;
     
     uiCurrentTime = esp_timer_get_time();
     uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
@@ -351,12 +352,23 @@ static void IRAM_ATTR ISR_9_SUB2(void* arg) // Sub2 Einfahrt
 ////////////////////////////////////////////////////////////////////////////////////////////
 //////////// tasks for all interrupts //////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
+void ISR1_feedback(void* arg) {
+    while (1) {
+        if (iFinalTelegram == 1) {
+            ESP_LOGI(TAG_ISR, "---> reset");
+            iFinalTelegram = 0; // Reset the flag
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS); // Delay to avoid busy-waiting
+    }
+}
+
+
 void ISR_1_Einfahrt_handler(void* pvParameters)
 {
     gpio_config_t io_conf;
 
     // configure GPIO03_I_MAIN_ISR_1
-    io_conf.intr_type = GPIO_INTR_POSEDGE;
+    io_conf.intr_type = GPIO_INTR_NEGEDGE;
     io_conf.pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1);
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
@@ -364,14 +376,17 @@ void ISR_1_Einfahrt_handler(void* pvParameters)
     gpio_config(&io_conf);
 
     //ESP_ERROR_CHECK(gpio_install_isr_service(0));
-    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, GPIO03_I_MAIN_ISR_1));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, (void*)GPIO03_I_MAIN_ISR_1));
 
     ESP_LOGI(TAG_ISR, "ISR 1 handler");
-    while (1) {
-        vTaskDelay (10/portTICK_PERIOD_MS);
-        // vTaskDelay(1);
-    }
+    //while (1) {
+    //    vTaskDelay (10/portTICK_PERIOD_MS);
+    //    // vTaskDelay(1);
+    //}
+
+    vTaskDelete(NULL);
 }
+
 
 void ISR_2_IN_handler (void* pvParameters)
 {
@@ -742,10 +757,29 @@ void app_main(void)
     //  create here tasks
     // vTaskDelay (10/portTICK_PERIOD_MS);
 
+/*
+
+    gpio_config_t io_conf;
+
+    io_conf.intr_type = GPIO_INTR_NEGEDGE;
+    io_conf.pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
+
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
 
     // pin to core "0"
-    xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
+    //xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
+    // configure GPIO03_I_MAIN_ISR_1
+    gpio_config(&io_conf);
+    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, (void*)GPIO03_I_MAIN_ISR_1));    
+
+*/
+ESP_ERROR_CHECK(gpio_install_isr_service(0));
+xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR1_feedback,          "ISR1_feedback",  2048, NULL, 5, NULL, 0);
+
     xTaskCreatePinnedToCore(ISR_2_IN_handler,       "ISR_2_IN_handler",         2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_3_SUB1_handler,     "ISR_3_SUB1_handler",       2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR_4_HALT1_handler,    "ISR4_HALT1_handler",       2048, NULL, 5, NULL, 0);
