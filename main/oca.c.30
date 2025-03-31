@@ -37,6 +37,7 @@ static const char *TAG_MQTT = "mqtt_example";
 static const char *TAG_ETH  = "eth_example";
 static const char *TAG_ISR  = "isr_example";
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Semaphore + ISR hanlde setup
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -68,14 +69,22 @@ static void log_error_if_nonzero(const char *message, int error_code)
 ////////////////////////////////////////////////////////////////////////////////////////////
 static void IRAM_ATTR ISR_1_Einfahrt(void *args) 
 {
+    //ESP_LOGI(TAG_ISR, "ISR_1 high");
+    //iFinalTelegram = 1;
     
     uiCurrentTime = esp_timer_get_time();
     uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
 
-    // -> detect "0"
-    if ((210 < uiTimeBetweenInterrupts) && (uiTimeBetweenInterrupts < 250)) {
+    //
+    
 
-        iStream = 0;
+    // ESP_LOGI(TAG_ISR, "time %d", uiTimeBetweenInterrupts);
+
+    // -> detect pur "0"
+    if ((210 < uiTimeBetweenInterrupts) && (uiTimeBetweenInterrupts < 240)) {
+
+        // set bit to "0"
+        iBitSet = 0;
 
 	    // start bit   
 	    if ((iCount == 8) && (iSet_preamble == 0))  {
@@ -84,23 +93,17 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 	    }    
 
 	    // part of eight bit word - collect here "0"
-	    else if ((iCount < 8) && (iSet_preamble == 0))  {
+	    else if ((iCount > 8) && (iSet_preamble == 0))  {
 		    bByte[iCount_Byte] = (bByte[iCount_Byte] << 1) | 0;
-            iCount++;
-	    }       
-        
-        else if ((10 < iCount) && (iSet_preamble == 1)) {
-            iCount_Byte = 0;
-            iCount = 0;
-            iSet_preamble = 0;
-            memset(bByte, 0, sizeof(bByte));
-        }          
+	    }            
     }
 
-	// -> detect "1"
-	else if ((100 < uiTimeBetweenInterrupts ) && (uiTimeBetweenInterrupts < 130)) {
+	// -> detect pur "1"
+	else if ((102 < uiTimeBetweenInterrupts ) && (uiTimeBetweenInterrupts < 130)) {
 
-        iStream++;
+        // ESP_LOGI(TAG_ISR, " logisch 1 ");
+        // set bit to "1"
+        iBitSet = 1;
 
         // work off preamble first
 	    if (iSet_preamble == 1) {
@@ -108,27 +111,146 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 	    }
 	  
 	    // final stop bit
-	    //else if ((iCount == 8) && ((iSet_preamble == 0))) {		    
-		//    iFinalTelegram = 1;	  
-        //    iSet_preamble = 1;
-        //    iCount_Byte = 0;
-        //    iCount = 0;
-	    //}
+	    else if ((iCount == 8) && ((iSet_preamble == 0))) {
+		    iCount = 0;	
+		    iFinalTelegram = 1;	  
+	    }
 	  
 	    // part of eight bit word - collect here "1"
-	    else if ((iCount < 8) && (iSet_preamble == 0))  {
+	    else if ((iCount > 8) && (iSet_preamble == 0))  {
+		    iCount++;
 		    bByte[iCount_Byte] = (bByte[iCount_Byte] << 1) | 1;
-            iCount++;
 	    }
-
-        if (8 < iStream) {
-            iSet_preamble = 1;
-            iCount_Byte = 0;
-            iCount = iStream;
-            iStream = 0;
-        }        
     }
 
+            // detect here "0"
+        if (iBitSet == 1) {
+
+            iBitSet = 0;
+
+	        // first start bit after preamble - start here with normal protocol
+            // finish preamble
+	        if ((iCount < 11) && (iSet_preamble == 1)) {
+		        iCount = 0;
+		        iSet_preamble = 0;
+	        }            
+
+	        // start bit	    
+	        if ((iCount == 8) && (iSet_preamble == 0))  {
+		        iCount_Byte++;
+		        iCount = 0;
+	        }    
+
+	        // part of eight bit word - collect here "0"
+	        else if ((iCount > 8) && (iSet_preamble == 0))  {
+                iCount++;
+		        bByte[iCount_Byte] = (bByte[iCount_Byte] << 1) | 0;
+	        }  
+
+	        // first start bit after preamble - start here with normal protocol
+            // finish preamble
+	        else if ((iCount < 11) && (iSet_preamble == 1)) {
+		        iCount = 0;
+		        iSet_preamble = 0;
+                ESP_LOGI(TAG_ISR, " daaa ");
+	        }  
+        }
+
+        // detect here "1"
+        if (iBitSet == 0) {
+
+            // ESP_LOGI(TAG_ISR, "high bit");
+
+            iFinalTelegram = 1;
+            iBitSet = 1;
+
+	        // part of eight bit word - collect here "1"
+	        if ((iCount > 8) && (iSet_preamble == 0))  {
+		        iCount++;
+		        bByte[iCount_Byte] = (bByte[iCount_Byte] << 1) | 1;
+	        }
+
+	        // final stop bit
+	        else if ((iCount == 8) && ((iSet_preamble == 0))) {
+		        iCount = 0;	
+				//if (xSemaphoreTake(xMutex, 10)) {
+				    //SW_Main(i_SW_R);   // Hauptstrecke verlassen
+				    iFinalTelegram = 1;
+				//    xSemaphoreGive(xMutex);
+			    //}
+	        }   
+
+	        // first start bit after preamble - start here with normal protocol
+            // finish preamble
+	        if ((iCount < 11) && (iSet_preamble == 1)) {
+		        iCount = 0;
+		        iSet_preamble = 0;
+                //iFinalTelegram = 1;
+	        }                   
+
+
+	// -> detect "transmit" bit
+	else if ((160 < uiTimeBetweenInterrupts) && (uiTimeBetweenInterrupts < 190)) {
+
+        // detect here "0"
+        if (iBitSet == 1) {
+
+            iBitSet = 0;
+
+	        // first start bit after preamble - start here with normal protocol
+            // finish preamble
+	        if ((iCount < 11) && (iSet_preamble == 1)) {
+		        iCount = 0;
+		        iSet_preamble = 0;
+	        }            
+
+	        // start bit	    
+	        if ((iCount == 8) && (iSet_preamble == 0))  {
+		        iCount_Byte++;
+		        iCount = 0;
+	        }    
+
+	        // part of eight bit word - collect here "0"
+	        else if ((iCount > 8) && (iSet_preamble == 0))  {
+                iCount++;
+		        bByte[iCount_Byte] = (bByte[iCount_Byte] << 1) | 0;
+	        }                
+
+        }
+
+        // detect here "1"
+        if (iBitSet == 0) {
+
+            // ESP_LOGI(TAG_ISR, "high bit");
+
+            iFinalTelegram = 1;
+            iBitSet = 1;
+
+	        // part of eight bit word - collect here "1"
+	        if ((iCount > 8) && (iSet_preamble == 0))  {
+		        iCount++;
+		        bByte[iCount_Byte] = (bByte[iCount_Byte] << 1) | 1;
+	        }
+
+	        // final stop bit
+	        else if ((iCount == 8) && ((iSet_preamble == 0))) {
+		        iCount = 0;	
+				//if (xSemaphoreTake(xMutex, 10)) {
+				    //SW_Main(i_SW_R);   // Hauptstrecke verlassen
+				    iFinalTelegram = 1;
+				//    xSemaphoreGive(xMutex);
+			    //}
+	        }   
+
+	        // first start bit after preamble - start here with normal protocol
+            // finish preamble
+	        if ((iCount < 11) && (iSet_preamble == 1)) {
+		        iCount = 0;
+		        iSet_preamble = 0;
+                //iFinalTelegram = 1;
+	        }                   
+        }
+    }
     uiLastInterruptTime = uiCurrentTime;
 }
 
@@ -137,10 +259,11 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 ////////////////////////////////////////////////////////////////////////////////////////////
 void ISR1_feedback(void* arg) {
     while (1) {
-        //if (iFinalTelegram == 1) {
-            ESP_LOGI(TAG_ISR, "preamble : %d  stream : %d -- 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X", iSet_preamble, iStream, bByte[0], bByte[1], bByte[2], bByte[3], bByte[5], bByte[6]);    
+        if (uiTimeBetweenInterrupts > 1) {
+            ESP_LOGI(TAG_ISR, " %llu ", uiTimeBetweenInterrupts);
+            // printf(" %llu \n", uiTimeBetweenInterrupts);
             //iFinalTelegram = 0; // Reset the flag
-        //}
+        }
         vTaskDelay(100 / portTICK_PERIOD_MS); // Delay to avoid busy-waiting
     }
 }
@@ -154,8 +277,8 @@ void ISR_1_Einfahrt_handler(void* pvParameters)
     io_conf.intr_type = GPIO_INTR_NEGEDGE;
     io_conf.pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1);
     io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
-    io_conf.pull_down_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
 
     //ESP_ERROR_CHECK(gpio_install_isr_service(0));
@@ -423,8 +546,7 @@ void app_main(void)
     xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
     xTaskCreatePinnedToCore(ISR1_feedback,          "ISR1_feedback",  2048, NULL, 5, NULL, 0);
 
-    iCount = 0;
-    
+ 
 
     // pin to core "1"
     // xTaskCreatePinnedToCore(mqtt_app_start, "mqtt_app_start", 4096, NULL, 5, NULL, 1);

@@ -11,15 +11,16 @@
 #include "esp_timer.h"
 #include "rom/ets_sys.h"
 
-extern volatile uint32_t   uiTimeBetweenInterrupts; 
-extern volatile uint32_t   uiCurrentTime;          
-extern volatile uint32_t   uiLastInterruptTime;   
+extern volatile uint64_t   uiTimeBetweenInterrupts; 
+extern volatile uint64_t   uiCurrentTime;          
+extern volatile uint64_t   uiLastInterruptTime;   
 
 extern volatile int        iBitSet;              
 extern volatile int        iCount;             
 extern volatile int        iSet_preamble;     
 extern volatile int        iCount_Byte;
 extern volatile int        iFinalTelegram;
+extern volatile int        iStream;
 
 extern volatile int        iCountVehicleBlock;
 
