@@ -85,15 +85,33 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 
 	    // part of eight bit word - collect here "0"
 	    else if ((iCount < 8) && (iSet_preamble == 0))  {
-		    bByte[iCount_Byte] = (bByte[iCount_Byte] << 1) | 0;
-            iCount++;
+                switch (iCount) {
+                    case 0: bByte[iCount_Byte] &=~1; break;
+                    case 1: bByte[iCount_Byte] &=~2; break;  
+                    case 2: bByte[iCount_Byte] &=~4; break;
+                    case 3: bByte[iCount_Byte] &=~8; break;  
+                    case 4: bByte[iCount_Byte] &=~16; break;
+                    case 5: bByte[iCount_Byte] &=~32; break;  
+                    case 6: bByte[iCount_Byte] &=~64; break;
+                    case 7: bByte[iCount_Byte] &=~128; break;  
+                }
+            iCount++;            
 	    }       
         
         else if ((10 < iCount) && (iSet_preamble == 1)) {
             iCount_Byte = 0;
             iCount = 0;
             iSet_preamble = 0;
-            memset(bByte, 0, sizeof(bByte));
+            //Memset(bByte, 0, sizeof(bByte));
+            bByte[0] = 0;
+            bByte[1] = 0;
+            bByte[2] = 0;
+            bByte[3] = 0;
+            bByte[4] = 0;
+            bByte[5] = 0;
+            bByte[6] = 0;
+            bByte[7] = 0;
+
         }          
     }
 
@@ -117,7 +135,16 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 	  
 	    // part of eight bit word - collect here "1"
 	    else if ((iCount < 8) && (iSet_preamble == 0))  {
-		    bByte[iCount_Byte] = (bByte[iCount_Byte] << 1) | 1;
+            switch (iCount) {
+                case 0: bByte[iCount_Byte] |=   1; break;
+                case 1: bByte[iCount_Byte] |=   2; break;  
+                case 2: bByte[iCount_Byte] |=   4; break;
+                case 3: bByte[iCount_Byte] |=   8; break;  
+                case 4: bByte[iCount_Byte] |=  16; break;
+                case 5: bByte[iCount_Byte] |=  32; break;  
+                case 6: bByte[iCount_Byte] |=  64; break;
+                case 7: bByte[iCount_Byte] |= 128; break;  
+            }
             iCount++;
 	    }
 
