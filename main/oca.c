@@ -32,6 +32,7 @@
 
 #define WDT_TIMEOUT_S 5  // Watchdog timeout in seconds
 #define TASK_LIST_BUFFER_SIZE 1024  // Buffer size for task list
+#define BETWEEN(value, min, max) (value < max && value > min)
 
 static const char *TAG_MQTT = "mqtt_example";
 static const char *TAG_ETH  = "eth_example";
@@ -55,6 +56,16 @@ esp_timer_handle_t ISR_SUB2;
 esp_timer_handle_t ISR_MAIN1;
 esp_timer_handle_t ISR_MAIN2;
 
+typedef struct xQeue_val
+{
+  int iPos;
+  unsigned char bByte;
+  int iTime;
+} xQeue_val;
+
+//struct xQueue_val  = {0,0};
+QueueHandle_t xQueue_Handler;
+
 
 static void log_error_if_nonzero(const char *message, int error_code)
 {
@@ -63,112 +74,142 @@ static void log_error_if_nonzero(const char *message, int error_code)
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////, bByte[0], bByte[1], bByte[2], bByte[3], bByte[5], bByte[6//////////////////////////////////////////////
 // Interrupt routines
 ////////////////////////////////////////////////////////////////////////////////////////////
-static void IRAM_ATTR ISR_1_Einfahrt(void *args) 
+static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 {
-    
+
+    struct xQeue_val qIN = { .iPos = 1, .bByte = 2, .iTime = 3 };
+
+    BaseType_t xHigherPrioritTaskWoken;
+    BaseType_t xStatus;
+    xHigherPrioritTaskWoken = pdFALSE;
+
+    //////////byte a=158; //10011110
+    //        76543210
+    //////////a = a | 0b00100000;
+    //////////print(a); //190
+
     uiCurrentTime = esp_timer_get_time();
     uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
 
+    // long break between signals
+    if (200000 < uiTimeBetweenInterrupts) {
+        iLongBreak = 1;
+    }
+
     // -> detect "0"
-    if ((210 < uiTimeBetweenInterrupts) && (uiTimeBetweenInterrupts < 250)) {
+    else if (204 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 250) {
 
-        iStream = 0;
+      if (iSet_preamble == 0) {
+          if (8 == iCount) {
+              if (iCount_Byte == 6) {
+                  iLongBreak = 1;        // release lock between messages
+                  iSet_preamble = 1;
+                  iStream = 0;
+                  iCount = 0;
+              } else {
+                  qIN.iTime = (int)uiTimeBetweenInterrupts;
+                  qIN.bByte = bByte[iCount_Byte];
+                  qIN.iPos = iCount_Byte;  
+                  xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
+                  if ( xHigherPrioritTaskWoken )
+                      portYIELD_FROM_ISR ();                                  
 
-	    // start bit   
-	    if ((iCount == 8) && (iSet_preamble == 0))  {
-		    iCount_Byte++;
-		    iCount = 0;
-	    }    
+                  iCount = 0;
+		          iCount_Byte++; // reached stop bit again
+                  bByte[iCount_Byte] |= 0x00;
+              }
 
-	    // part of eight bit word - collect here "0"
-	    else if ((iCount < 8) && (iSet_preamble == 0))  {
-                switch (iCount) {
-                    case 0: bByte[iCount_Byte] &=~1; break;
-                    case 1: bByte[iCount_Byte] &=~2; break;  
-                    case 2: bByte[iCount_Byte] &=~4; break;
-                    case 3: bByte[iCount_Byte] &=~8; break;  
-                    case 4: bByte[iCount_Byte] &=~16; break;
-                    case 5: bByte[iCount_Byte] &=~32; break;  
-                    case 6: bByte[iCount_Byte] &=~64; break;
-                    case 7: bByte[iCount_Byte] &=~128; break;  
-                }
-            iCount++;            
-	    }       
-        
-        else if ((10 < iCount) && (iSet_preamble == 1)) {
-            iCount_Byte = 0;
-            iCount = 0;
-            iSet_preamble = 0;
-            //Memset(bByte, 0, sizeof(bByte));
-            bByte[0] = 0;
-            bByte[1] = 0;
-            bByte[2] = 0;
-            bByte[3] = 0;
-            bByte[4] = 0;
-            bByte[5] = 0;
-            bByte[6] = 0;
-            bByte[7] = 0;
+          } else if (iCount < 8) {
+              bByte[iCount_Byte] &= ~(1 << iCount);
+              iCount++;
+          }
 
-        }          
+      // must is here to detect first stop bit after preamble 
+      } else if (iSet_Turnover == 1 && iCount == 0) {
+           iCount_Byte = 0;
+           iSet_Turnover = 0;
+           iSet_preamble = 0;
+           qIN.iTime = (int)uiTimeBetweenInterrupts;
+           qIN.bByte = bByte[iCount_Byte];
+           qIN.iPos = 3333;  
+           xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
+           bByte[iCount_Byte] |= 0x00;
+      }
     }
 
 	// -> detect "1"
-	else if ((100 < uiTimeBetweenInterrupts ) && (uiTimeBetweenInterrupts < 130)) {
+	else if (100 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {
 
-        iStream++;
+        // running for preamble
+        if (iSet_preamble == 1)
+            iStream++;
 
-        // work off preamble first
-	    if (iSet_preamble == 1) {
-		    iCount++;
-	    }
-	  
-	    // final stop bit
-	    //else if ((iCount == 8) && ((iSet_preamble == 0))) {		    
-		//    iFinalTelegram = 1;	  
-        //    iSet_preamble = 1;
-        //    iCount_Byte = 0;
-        //    iCount = 0;
-	    //}
-	  
-	    // part of eight bit word - collect here "1"
-	    else if ((iCount < 8) && (iSet_preamble == 0))  {
-            switch (iCount) {
-                case 0: bByte[iCount_Byte] |=   1; break;
-                case 1: bByte[iCount_Byte] |=   2; break;  
-                case 2: bByte[iCount_Byte] |=   4; break;
-                case 3: bByte[iCount_Byte] |=   8; break;  
-                case 4: bByte[iCount_Byte] |=  16; break;
-                case 5: bByte[iCount_Byte] |=  32; break;  
-                case 6: bByte[iCount_Byte] |=  64; break;
-                case 7: bByte[iCount_Byte] |= 128; break;  
+        // detected preamble -- collecting here bits
+        else if (iSet_preamble == 0) {
+            if (iCount < 8) {
+                bByte[iCount_Byte] |= (1 << iCount);
+                iCount++;
+            } else if (iCount == 8) {  //
+                iLongBreak = 1;
+                iSet_preamble = 1;
+
+                qIN.iTime = (int)uiTimeBetweenInterrupts;
+                qIN.bByte = bByte[iCount_Byte];
+                qIN.iPos = 12121;  
+                xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
             }
-            iCount++;
-	    }
+        }
 
-        if (8 < iStream) {
-            iSet_preamble = 1;
-            iCount_Byte = 0;
-            iCount = iStream;
-            iStream = 0;
-        }        
+        if (iLongBreak == 0) {
+            if (iSet_preamble == 1) {
+              if (13 < iStream && iStream < 17) {
+                iSet_Turnover = 1; // preamble done
+              }                
+            }
+        }
+        else if (iLongBreak == 1)
+            iLongBreak = 0;        // release lock between messages
     }
 
     uiLastInterruptTime = uiCurrentTime;
+    //vTaskDelay(100 / portTICK_PERIOD_MS); // Delay to avoid busy-waiting
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //////////// tasks for all interrupts //////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
 void ISR1_feedback(void* arg) {
+
+    struct xQeue_val qOUT;
+    BaseType_t xStatus;
+
+
     while (1) {
+
         //if (iFinalTelegram == 1) {
-            ESP_LOGI(TAG_ISR, "preamble : %d  stream : %d -- 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X", iSet_preamble, iStream, bByte[0], bByte[1], bByte[2], bByte[3], bByte[5], bByte[6]);    
-            //iFinalTelegram = 0; // Reset the flag
+        //    iFinalTelegram = 0;
+        //    ESP_LOGI(TAG_ISR, "iFinalTelegram");
         //}
-        vTaskDelay(100 / portTICK_PERIOD_MS); // Delay to avoid busy-waiting
+
+        xStatus = xQueueReceive(xQueue_Handler, &(qOUT), portMAX_DELAY);
+        if (xStatus == pdTRUE) {
+          ESP_LOGI(TAG_ISR, "pos : %d, byte : %hhu, time : %d", qOUT.iPos, qOUT.bByte, qOUT.iTime);
+          vTaskDelay(100 / portTICK_PERIOD_MS); // Delay to avoid busy-waiting
+          //qOUT.iSet = 0;
+        }
+
+        //if (qOUT.iSet == 1) {
+        //    qOUT.iSet = 0;
+
+            // ESP_LOGI(TAG_ISR, "preamble : %d  stream : %d time : %llu -- 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X", iSet_preamble, iStream, uiTimeBetweenInterrupts, bByte[0], bByte[1], bByte[2], bByte[3], bByte[5], bByte[6]);
+            // ESP_LOGI(TAG_ISR, "iSet_preamble : %d  stream : %d time : %llu ", iSet_preamble, iStream, uiTimeBetweenInterrupts);
+            //ESP_LOGI(TAG_ISR, "queue : %d", qOUT.iAmount);
+            // ESP_LOGI(TAG_ISR, "queue : %d", qOUT->iAmount);
+
+
     }
 }
 
@@ -213,7 +254,7 @@ static void spi_app_start(void) {
     };
 
     ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
-    spi_device_handle_t spi_handle; 
+    spi_device_handle_t spi_handle;
 
     // Configure SPI device interface
     spi_device_interface_config_t devcfg = {
@@ -229,7 +270,7 @@ static void spi_app_start(void) {
         .flags = 0,
         .queue_size = 1,
     };
-    
+
     ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_add_device(HSPI_HOST, &devcfg, &spi_handle));
 
     eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
@@ -358,8 +399,8 @@ void  mqtt_app_start(void) {
       .session.last_will.retain = 1};
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
-    esp_mqtt_client_start(client);  // Start the MQTT client        
-    
+    esp_mqtt_client_start(client);  // Start the MQTT client
+
 
     vTaskDelete(NULL);
     //https://github.com/tuanpmt/esp32-mqtt/blob/master/main/app_main.c#L124
@@ -369,11 +410,15 @@ void  mqtt_app_start(void) {
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////////////////
-void app_main(void) 
+void app_main(void)
 {
-    esp_log_level_set("TAG_ISR", ESP_LOG_INFO);
-    ESP_LOGI(TAG_ISR, "bin da");
+    struct xQeue_val a = { .iPos = 1, .bByte = 0, .iTime = 1 };
 
+    esp_log_level_set("TAG_ISR", ESP_LOG_INFO);
+    //ESP_LOGI(TAG_ISR, "a.iAmount %d, a.iSet %d, a.iTime %d", a.iAmount, a.iSet, a.iTime);
+
+    //xQueue_Handler = xQueueCreate (10, sizeof(struct xQeue_val * ));
+    xQueue_Handler = xQueueCreate (10, sizeof(xQeue_val));
 
     ////////////////////////////////////////////////////////////////////////////////////////////
     // W5500 / TCP setup
@@ -439,11 +484,11 @@ void app_main(void)
     //xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
     // configure GPIO03_I_MAIN_ISR_1
     gpio_config(&io_conf);
-    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, (void*)GPIO03_I_MAIN_ISR_1));    
+    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, (void*)GPIO03_I_MAIN_ISR_1));
 
 */
 
-    
+
 
 
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
@@ -451,7 +496,7 @@ void app_main(void)
     xTaskCreatePinnedToCore(ISR1_feedback,          "ISR1_feedback",  2048, NULL, 5, NULL, 0);
 
     iCount = 0;
-    
+
 
     // pin to core "1"
     // xTaskCreatePinnedToCore(mqtt_app_start, "mqtt_app_start", 4096, NULL, 5, NULL, 1);
@@ -460,6 +505,7 @@ void app_main(void)
     esp_intr_enable(ISR_1);
     // esp_log_level_set("*", ESP_LOG_DEBUG);
     ESP_LOGI(TAG_ISR, "bin da");
+    //ESP_LOGI(TAG_ISR, "a.iAmount %d, a.iSet %d, a.iTime %d", a.iAmount, a.iSet, a.iTime);
 
     //spi_app_start();
     //mqtt_app_start();

@@ -17,10 +17,12 @@ extern volatile uint64_t   uiLastInterruptTime;
 
 extern volatile int        iBitSet;              
 extern volatile int        iCount;             
-extern volatile int        iSet_preamble;     
+extern volatile int        iSet_preamble;   
+extern volatile int        iSet_Turnover;  
 extern volatile int        iCount_Byte;
 extern volatile int        iFinalTelegram;
 extern volatile int        iStream;
+extern volatile int        iLongBreak;
 
 extern volatile int        iCountVehicleBlock;
 
@@ -33,6 +35,6 @@ extern volatile int        i_6_MAIN1;
 extern volatile int        i_7_MAIN2;
 extern volatile int        i_8_BUTTON;
 
-extern volatile unsigned char bByte[10];
+extern volatile uint8_t bByte[10];
 
 #endif
