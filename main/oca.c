@@ -100,7 +100,7 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
     }
 
     // -> detect "0"
-    else if (204 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 250) {
+    else if (220 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 270) {
 
       if (iSet_preamble == 0) {
           if (8 == iCount) {
@@ -128,25 +128,25 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
           }
 
       // must is here to detect first stop bit after preamble 
-      } else if (iSet_Turnover == 1 && iCount == 0) {
-           iCount_Byte = 0;
-           iSet_Turnover = 0;
-           iSet_preamble = 0;
+      } else if (iSet_preamble == 1) {
+           if (iSet_Turnover == 1 && iCount == 0) {
+               iCount_Byte = 0;
+               iSet_Turnover = 0;
+               iSet_preamble = 0;
 
-           memset(bByte, 0, sizeof(bByte));
-           bByte[iCount_Byte] |= 0x00;
+               memset(bByte, 0, sizeof(bByte));
+               bByte[iCount_Byte] |= 0x00;
 
-           qIN.iTime = (int)uiTimeBetweenInterrupts;
-           qIN.bByte = bByte[iCount_Byte];
-           qIN.iPos = 3333;  
-           xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
-           
-           
+               //qIN.iTime = (int)uiTimeBetweenInterrupts;
+               //qIN.bByte = bByte[iCount_Byte];
+               //qIN.iPos = 3333;  
+            //xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
+           }
       }
     }
 
 	// -> detect "1"
-	else if (100 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {
+	else if (109 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {
 
         // running for preamble
         if (iSet_preamble == 1)
@@ -158,9 +158,6 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
                 bByte[iCount_Byte] |= (1 << iCount);
                 iCount++;
             } else if (iCount == 8) {  //
-                iLongBreak = 1;
-                iSet_preamble = 1;
-
                 qIN.iTime = (int)uiTimeBetweenInterrupts;
                 qIN.bByte = bByte[iCount_Byte];
                 qIN.iPos = 12121;  
@@ -169,6 +166,10 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
                 iCount_Byte = 0;
                 iCount = 0;
                 iStream = 0;
+
+                iLongBreak = 1;
+                iSet_preamble = 1;
+                memset(bByte, 0, sizeof(bByte));
             }
         }
 
@@ -176,7 +177,10 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
             if (iSet_preamble == 1) {
               if (13 < iStream && iStream < 17) {
                 iSet_Turnover = 1; // preamble done
-              }                
+                iCount = 0;
+              } else {
+                iSet_Turnover = 0;
+              }             
             }
         }
         else if (iLongBreak == 1)
@@ -231,8 +235,8 @@ void ISR_1_Einfahrt_handler(void* pvParameters)
     io_conf.intr_type = GPIO_INTR_NEGEDGE;
     io_conf.pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1);
     io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
-    io_conf.pull_down_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
     gpio_config(&io_conf);
 
     //ESP_ERROR_CHECK(gpio_install_isr_service(0));
