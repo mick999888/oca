@@ -132,11 +132,16 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
            iCount_Byte = 0;
            iSet_Turnover = 0;
            iSet_preamble = 0;
+
+           memset(bByte, 0, sizeof(bByte));
+           bByte[iCount_Byte] |= 0x00;
+
            qIN.iTime = (int)uiTimeBetweenInterrupts;
            qIN.bByte = bByte[iCount_Byte];
            qIN.iPos = 3333;  
            xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
-           bByte[iCount_Byte] |= 0x00;
+           
+           
       }
     }
 
@@ -160,6 +165,10 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
                 qIN.bByte = bByte[iCount_Byte];
                 qIN.iPos = 12121;  
                 xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
+
+                iCount_Byte = 0;
+                iCount = 0;
+                iStream = 0;
             }
         }
 
