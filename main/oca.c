@@ -96,7 +96,10 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 
     // long break between signals
     if (200000 < uiTimeBetweenInterrupts) {
-        iLongBreak = 1;
+        iLongBreak = 1;        // release lock between messages
+        iSet_preamble = 1;
+        iStream = 0;
+        iCount = 0;
     }
 
     // -> detect "0"
@@ -119,7 +122,7 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 
                   iCount = 0;
 		          iCount_Byte++; // reached stop bit again
-                  bByte[iCount_Byte] |= 0x00;
+                  bByte[iCount_Byte] |= 0b00000000;
               }
 
           } else if (iCount < 8) {
@@ -129,18 +132,19 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 
       // must is here to detect first stop bit after preamble 
       } else if (iSet_preamble == 1) {
-           if (iSet_Turnover == 1 && iCount == 0) {
+           if (iSet_Turnover == 1) {
                iCount_Byte = 0;
                iSet_Turnover = 0;
                iSet_preamble = 0;
 
-               memset(bByte, 0, sizeof(bByte));
-               bByte[iCount_Byte] |= 0x00;
+               //memset(bByte, 0, sizeof(bByte));
+               bByte[iCount_Byte] |= 0b00000000;
 
                //qIN.iTime = (int)uiTimeBetweenInterrupts;
                //qIN.bByte = bByte[iCount_Byte];
                //qIN.iPos = 3333;  
-            //xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
+               //xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
+               iStream = 0;
            }
       }
     }
@@ -148,39 +152,41 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 	// -> detect "1"
 	else if (109 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {
 
-        // running for preamble
-        if (iSet_preamble == 1)
-            iStream++;
-
-        // detected preamble -- collecting here bits
-        else if (iSet_preamble == 0) {
-            if (iCount < 8) {
-                bByte[iCount_Byte] |= (1 << iCount);
-                iCount++;
-            } else if (iCount == 8) {  //
-                qIN.iTime = (int)uiTimeBetweenInterrupts;
-                qIN.bByte = bByte[iCount_Byte];
-                qIN.iPos = 12121;  
-                xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
-
-                iCount_Byte = 0;
-                iCount = 0;
-                iStream = 0;
-
-                iLongBreak = 1;
-                iSet_preamble = 1;
-                memset(bByte, 0, sizeof(bByte));
-            }
-        }
-
         if (iLongBreak == 0) {
             if (iSet_preamble == 1) {
-              if (13 < iStream && iStream < 17) {
-                iSet_Turnover = 1; // preamble done
-                iCount = 0;
-              } else {
-                iSet_Turnover = 0;
-              }             
+              
+                iStream++;
+                if (13 < iStream && iStream < 17) {
+                    iSet_Turnover = 1; // preamble done
+                    iCount = 0;
+                    qIN.iTime = (int)uiTimeBetweenInterrupts;
+                    qIN.bByte = 0b11111111;
+                    qIN.iPos = iStream;  
+                    xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
+
+                } else {
+                    iSet_Turnover = 0;
+                }    
+
+            // detected preamble -- collecting here bits         
+            } else if (iSet_preamble == 0) {
+                if (iCount < 8) {
+                    bByte[iCount_Byte] |= (1 << iCount);
+                    iCount++;
+                } else if (iCount == 8) {  // stop here -- on pos #8 "1" is end bit
+                    qIN.iTime = (int)uiTimeBetweenInterrupts;
+                    qIN.bByte = bByte[iCount_Byte];
+                    qIN.iPos = iCount_Byte;  
+                    xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
+    
+                    iCount_Byte = 0;
+                    iCount = 0;
+                    iStream = 0;
+    
+                    iLongBreak = 1;
+                    iSet_preamble = 1;
+                    //memset(bByte, 0, sizeof(bByte));
+                }    
             }
         }
         else if (iLongBreak == 1)
@@ -209,7 +215,9 @@ void ISR1_feedback(void* arg) {
 
         xStatus = xQueueReceive(xQueue_Handler, &(qOUT), portMAX_DELAY);
         if (xStatus == pdTRUE) {
-          ESP_LOGI(TAG_ISR, "pos : %d, byte : %hhu, time : %d", qOUT.iPos, qOUT.bByte, qOUT.iTime);
+          //ESP_LOGI(TAG_ISR, "pos : %d, byte : %hhu, time : %d", qOUT.iPos, qOUT.bByte, qOUT.iTime);
+          ESP_LOGI(TAG_ISR, "pos : %d, byte : %02X, time : %d", qOUT.iPos, qOUT.bByte, qOUT.iTime);
+          //After setting bit 7: %02X\n", byte
           vTaskDelay(100 / portTICK_PERIOD_MS); // Delay to avoid busy-waiting
           //qOUT.iSet = 0;
         }
@@ -235,7 +243,7 @@ void ISR_1_Einfahrt_handler(void* pvParameters)
     io_conf.intr_type = GPIO_INTR_NEGEDGE;
     io_conf.pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1);
     io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
     io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
     gpio_config(&io_conf);
 
