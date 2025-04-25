@@ -107,12 +107,16 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 
       if (iSet_preamble == 0) {
           if (8 == iCount) {
+              iCount = 0;
               if (iCount_Byte == 6) {
+
                   iLongBreak = 1;        // release lock between messages
                   iSet_preamble = 1;
                   iStream = 0;
-                  iCount = 0;
+                  iCount_Byte = 0;
+
               } else {
+
                   qIN.iTime = (int)uiTimeBetweenInterrupts;
                   qIN.bByte = bByte[iCount_Byte];
                   qIN.iPos = iCount_Byte;  
@@ -120,7 +124,6 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
                   if ( xHigherPrioritTaskWoken )
                       portYIELD_FROM_ISR ();                                  
 
-                  iCount = 0;
 		          iCount_Byte++; // reached stop bit again
                   bByte[iCount_Byte] |= 0b00000000;
               }
