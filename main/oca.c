@@ -58,7 +58,8 @@ esp_timer_handle_t ISR_MAIN2;
 
 typedef struct xQeue_val
 {
-  int iPos;
+  int iPosBit;
+  int iPosByte;
   unsigned char bByte;
   int iTime;
 } xQeue_val;
@@ -80,7 +81,7 @@ static void log_error_if_nonzero(const char *message, int error_code)
 static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 {
 
-    struct xQeue_val qIN = { .iPos = 1, .bByte = 2, .iTime = 3 };
+    struct xQeue_val qIN = { .iPosBit = 0, .iPosByte = 0, .bByte = 0, .iTime = 0 };
 
     BaseType_t xHigherPrioritTaskWoken;
     BaseType_t xStatus;
@@ -95,109 +96,109 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
     uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
 
     // long break between signals
-    if (200000 < uiTimeBetweenInterrupts) {
+    if (25000 < uiTimeBetweenInterrupts) {
         iLongBreak = 1;        // release lock between messages
         iSet_preamble = 1;
         iStream = 0;
         iCount = 0;
+        iSet_Turnover = 0;
     }
 
     // -> detect "0"
     else if (220 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 270) {
+        if (iLongBreak == 0) {
+            if (iSet_preamble == 0) {
+                if (8 == iCount) {
+                    
+                    if (iCount_Byte == 6) {
 
-      if (iSet_preamble == 0) {
-          if (8 == iCount) {
-              iCount = 0;
-              if (iCount_Byte == 6) {
+                        iLongBreak = 1;        // release lock between messages
+                        iSet_preamble = 1;
+                        iStream = 0;
+                        iCount_Byte = 0;
 
-                  iLongBreak = 1;        // release lock between messages
-                  iSet_preamble = 1;
-                  iStream = 0;
-                  iCount_Byte = 0;
+                    } else if (iCount_Byte < 6) {
+                        // complete byte                  
+                        qIN.iTime = (int)uiTimeBetweenInterrupts;
+                        qIN.bByte = bByte[iCount_Byte];
+                        qIN.iPosByte = iCount_Byte;  
+                        qIN.iPosBit = iCount;
+                        xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
 
-              } else {
+                        iCount_Byte++; // reached stop bit again
+                        bByte[iCount_Byte] |= 0b00000000;
+                    }
+                    iCount = 0;
 
-                  qIN.iTime = (int)uiTimeBetweenInterrupts;
-                  qIN.bByte = bByte[iCount_Byte];
-                  qIN.iPos = iCount_Byte;  
-                  xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
-                  if ( xHigherPrioritTaskWoken )
-                      portYIELD_FROM_ISR ();                                  
+                } else if (iCount < 8) {
+                    bByte[iCount_Byte] &= ~(1 << iCount);
+                    iCount++;
+                }
 
-		          iCount_Byte++; // reached stop bit again
-                  bByte[iCount_Byte] |= 0b00000000;
-              }
+            // must is here to detect first stop bit after preamble 
+            } else if (iSet_preamble == 1) {
+                if (iSet_Turnover == 1) {
 
-          } else if (iCount < 8) {
-              bByte[iCount_Byte] &= ~(1 << iCount);
-              iCount++;
-          }
+                    memset(bByte, 0, sizeof(bByte));
 
-      // must is here to detect first stop bit after preamble 
-      } else if (iSet_preamble == 1) {
-           if (iSet_Turnover == 1) {
-               iCount_Byte = 0;
-               iSet_Turnover = 0;
-               iSet_preamble = 0;
+                    iCount_Byte = 0;
+                    iSet_Turnover = 0;
+                    iSet_preamble = 0;
 
-               //memset(bByte, 0, sizeof(bByte));
-               bByte[iCount_Byte] |= 0b00000000;
+                    // --->>> turnover works
+                    //qIN.iTime = (int)uiTimeBetweenInterrupts;
+                    //qIN.bByte = bByte[iCount_Byte];
+                    //qIN.iPos = iStream;  
+                    //xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);               
 
-               //qIN.iTime = (int)uiTimeBetweenInterrupts;
-               //qIN.bByte = bByte[iCount_Byte];
-               //qIN.iPos = 3333;  
-               //xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
-               iStream = 0;
-           }
-      }
+                    bByte[iCount_Byte] |= 0b00000000;
+                    iStream = 0;
+                }
+            }
+        }            
     }
 
 	// -> detect "1"
-	else if (109 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {
+	else if (100 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {
 
         if (iLongBreak == 0) {
-            if (iSet_preamble == 1) {
-              
-                iStream++;
-                if (13 < iStream && iStream < 17) {
-                    iSet_Turnover = 1; // preamble done
-                    iCount = 0;
-                    qIN.iTime = (int)uiTimeBetweenInterrupts;
-                    qIN.bByte = 0b11111111;
-                    qIN.iPos = iStream;  
-                    xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
+            //if (iSet_preamble == 1) {
+            //    iStream++;
+            //    if (13 < iStream && iStream < 20) {
+            //        iSet_Turnover = 1; // preamble done
+            //        iCount = 0;
+            //    } else {
+            //        iSet_Turnover = 0;
+            //    }    
 
-                } else {
-                    iSet_Turnover = 0;
-                }    
-
-            // detected preamble -- collecting here bits         
-            } else if (iSet_preamble == 0) {
-                if (iCount < 8) {
-                    bByte[iCount_Byte] |= (1 << iCount);
-                    iCount++;
-                } else if (iCount == 8) {  // stop here -- on pos #8 "1" is end bit
-                    qIN.iTime = (int)uiTimeBetweenInterrupts;
-                    qIN.bByte = bByte[iCount_Byte];
-                    qIN.iPos = iCount_Byte;  
-                    xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
-    
+            if (iSet_preamble == 0) {
+                if (iCount == 8) {  // stop here -- on pos #8 "1" is end bit
                     iCount_Byte = 0;
                     iCount = 0;
                     iStream = 0;
-    
                     iLongBreak = 1;
                     iSet_preamble = 1;
                     //memset(bByte, 0, sizeof(bByte));
-                }    
+                } else if (iCount < 8) {
+                    bByte[iCount_Byte] |= (1 << iCount);
+                    iCount++; 
+                }  
             }
         }
-        else if (iLongBreak == 1)
-            iLongBreak = 0;        // release lock between messages
-    }
+        else if (iLongBreak == 1) {
+            //iLongBreak = 0;        // release lock between messages
+            if (iSet_preamble == 1) {
+                iStream++;
+                if (13 < iStream && iStream < 18) {
+                    iSet_Turnover = 1; // preamble done
+                    iCount = 0;
+                    iLongBreak = 0;   // release lock between messages
+                } 
+            }   
 
+        }            
+    }
     uiLastInterruptTime = uiCurrentTime;
-    //vTaskDelay(100 / portTICK_PERIOD_MS); // Delay to avoid busy-waiting
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -211,29 +212,14 @@ void ISR1_feedback(void* arg) {
 
     while (1) {
 
-        //if (iFinalTelegram == 1) {
-        //    iFinalTelegram = 0;
-        //    ESP_LOGI(TAG_ISR, "iFinalTelegram");
-        //}
-
         xStatus = xQueueReceive(xQueue_Handler, &(qOUT), portMAX_DELAY);
         if (xStatus == pdTRUE) {
           //ESP_LOGI(TAG_ISR, "pos : %d, byte : %hhu, time : %d", qOUT.iPos, qOUT.bByte, qOUT.iTime);
-          ESP_LOGI(TAG_ISR, "pos : %d, byte : %02X, time : %d", qOUT.iPos, qOUT.bByte, qOUT.iTime);
-          //After setting bit 7: %02X\n", byte
-          vTaskDelay(100 / portTICK_PERIOD_MS); // Delay to avoid busy-waiting
-          //qOUT.iSet = 0;
+          ESP_LOGI(TAG_ISR, "posBit : %d, posByte : %d, byte : %02X, time : %d", qOUT.iPosBit, qOUT.iPosByte, qOUT.bByte, qOUT.iTime);
+          vTaskDelay(portTICK_PERIOD_MS); // Delay to avoid busy-waiting
+          //xQueueReset(xQueue_Handler);
+          
         }
-
-        //if (qOUT.iSet == 1) {
-        //    qOUT.iSet = 0;
-
-            // ESP_LOGI(TAG_ISR, "preamble : %d  stream : %d time : %llu -- 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X", iSet_preamble, iStream, uiTimeBetweenInterrupts, bByte[0], bByte[1], bByte[2], bByte[3], bByte[5], bByte[6]);
-            // ESP_LOGI(TAG_ISR, "iSet_preamble : %d  stream : %d time : %llu ", iSet_preamble, iStream, uiTimeBetweenInterrupts);
-            //ESP_LOGI(TAG_ISR, "queue : %d", qOUT.iAmount);
-            // ESP_LOGI(TAG_ISR, "queue : %d", qOUT->iAmount);
-
-
     }
 }
 
@@ -436,7 +422,7 @@ void  mqtt_app_start(void) {
 ////////////////////////////////////////////////////////////////////////////////////////////
 void app_main(void)
 {
-    struct xQeue_val a = { .iPos = 1, .bByte = 0, .iTime = 1 };
+    //struct xQeue_val a = { .iPos = 1, .bByte = 0, .iTime = 1 };
 
     esp_log_level_set("TAG_ISR", ESP_LOG_INFO);
     //ESP_LOGI(TAG_ISR, "a.iAmount %d, a.iSet %d, a.iTime %d", a.iAmount, a.iSet, a.iTime);
