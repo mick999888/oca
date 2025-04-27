@@ -280,17 +280,7 @@ static void IRAM_ATTR ISR_1_Einfahrt(void* args)
 		    iCount++;
 	    }
 	  
-	    // final stop bit
-	    else if ((iCount == 8) && ((iSet_preamble == 0))) {
-		    iCount = 0;	
-		    iFinalTelegram = 1;	  
-	    }
-	  
-	    // part of eight bit word - collect here "1"
-	    else if ((iCount > 8) && (iSet_preamble == 0))  {
-		    iCount++;
-		    bByte[iCount_Byte] = (bByte[iCount_Byte] << 1) | 1;
-	    }
+h
     }
 
 	// -> detect "transmit" bit

@@ -23,6 +23,8 @@ volatile int        i_5_HALT2                  = 0;
 volatile int        i_6_MAIN1                  = 0;
 volatile int        i_7_MAIN2                  = 0;
 volatile int        i_8_BUTTON                 = 0;
-volatile int        iA                         = 1;
+
 
 volatile uint8_t bByte[10];
+//volatile unsigned char aOut[80];
+//volatile unsigned char bOut[80];

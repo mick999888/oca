@@ -82,7 +82,7 @@ static void log_error_if_nonzero(const char *message, int error_code)
 static void IRAM_ATTR ISR_1_Einfahrt(void *args)
 {
 
-    struct xQeue_val qIN = { .iPosBit = 0, .iPosByte = 0, .bByte = 0, .iTime = 0  };
+    struct xQeue_val qIN = { .bOut = 0, .iPosBit = 0, .iPosByte = 0, .bByte = 0, .iTime = 0  };
 
     BaseType_t xHigherPrioritTaskWoken;
     BaseType_t xStatus;
@@ -111,14 +111,15 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
        qIN.iPosBit = iCount;
        //strncpy(qIN.bOut, aOut, 80);
        xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
-       //strncpy(bOut, aOut, 80)
-       //memset (aOut, 0, sizeof(aOut));
+       strncpy(bOut, aOut, 80)
+       memset (aOut, 0, sizeof(aOut));
        
     }
 
     // -> detect "0"
     else if (220 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 270) {
-
+        aOut[strlen(aOut) + 1] = '0';
+        /*
         if (iLongBreak == 0) {
             if (iSet_preamble == 0) {
                 if (8 == iCount) {
@@ -178,13 +179,13 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
                 }
             }
         } 
-              
+        */           
     }
 
 	// -> detect "1"
 	else if (100 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {
-        
-    
+        aOut[strlen(aOut) + 1] = '1';
+    /*
         if (iLongBreak == 0) {
             //if (iSet_preamble == 1) {
             //    iStream++;
@@ -223,7 +224,7 @@ static void IRAM_ATTR ISR_1_Einfahrt(void *args)
         }            
     
     }
-    
+    */
     uiLastInterruptTime = uiCurrentTime;
 }
 
@@ -241,10 +242,10 @@ void ISR1_feedback(void* arg) {
         xStatus = xQueueReceive(xQueue_Handler, &(qOUT), portMAX_DELAY);
         if (xStatus == pdTRUE) {
           //ESP_LOGI(TAG_ISR, "pos : %d, byte : %hhu, time : %d", qOUT.iPos, qOUT.bByte, qOUT.iTime);
-          ESP_LOGI(TAG_ISR, "posBit : %d, posByte : %d, byte : %02X, time : %d", qOUT.iPosBit, qOUT.iPosByte, qOUT.bByte, qOUT.iTime);
+          ESP_LOGI(TAG_ISR, "string" : "posBit : %d, posByte : %d, byte : %02X, time : %d", qOUT.iPosBit, qOUT.iPosByte, qOUT.bByte, qOUT.iTime);
           vTaskDelay(portTICK_PERIOD_MS); // Delay to avoid busy-waiting
           //xQueueReset(xQueue_Handler);
-          //printf("%s\n", bOut);
+          printf("%s\n", bOut);
           
         }
     }
