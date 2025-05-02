@@ -4,12 +4,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
-#include "driver/adc.h"
 #include "driver/gpio.h"
-#include "esp_log.h"
-#include "esp_adc_cal.h"
-#include "esp_timer.h"
 #include "rom/ets_sys.h"
+
+#include "esp_adc/adc_oneshot.h"
+#include "esp_adc/adc_continuous.h"
 
 extern volatile uint64_t   uiTimeBetweenInterrupts; 
 extern volatile uint64_t   uiCurrentTime;          
@@ -35,9 +34,12 @@ extern volatile int        i_6_MAIN1;
 extern volatile int        i_7_MAIN2;
 extern volatile int        i_8_BUTTON;
 
-
 extern volatile uint8_t bByte[10];
-//extern volatile unsigned char aOut[80];
-//extern volatile unsigned char bOut[80];
+extern volatile unsigned char aOut[80];
+extern volatile unsigned char bOut[80];
+
+extern bool bTrigger;
+
+//extern adc_oneshot_unit_handle_t adc1_handle;
 
 #endif

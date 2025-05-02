@@ -4,7 +4,12 @@
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 #include "driver/spi_master.h"
-#include "driver/timer.h"
+#include "driver/gptimer.h"
+//#include "driver/timer.h"
+
+//#include "driver/adc.h"
+#include "esp_adc/adc_oneshot.h"
+#include "esp_adc/adc_continuous.h"
 
 #include "esp_check.h"
 #include "esp_eth.h"
@@ -58,403 +63,89 @@ esp_timer_handle_t ISR_MAIN2;
 
 typedef struct xQeue_val
 {
-  int iPosBit;
-  int iPosByte;
+  float iPos;
   unsigned char bByte;
   int iTime;
-  unsigned char bOut[80];
 } xQeue_val;
 
 //struct xQueue_val  = {0,0};
 QueueHandle_t xQueue_Handler;
 
 
-static void log_error_if_nonzero(const char *message, int error_code)
+//====================================================================================================================
+//====================================================================================================================
+//====================================================================================================================
+static void IRAM_ATTR ISR_1_Timer(void *args)
 {
-    if (error_code != 0) {
-        ESP_LOGE(TAG_MQTT, "Last error %s: 0x%x", message, error_code);
-    }
-}
+    bTrigger = true;
+}    
 
-//////////////////////////////////////////////, bByte[0], bByte[1], bByte[2], bByte[3], bByte[5], bByte[6//////////////////////////////////////////////
-// Interrupt routines
-////////////////////////////////////////////////////////////////////////////////////////////
-static void IRAM_ATTR ISR_1_Einfahrt(void *args)
+void ISR_1_Timer_handler(void* pvParameters)
 {
 
-    struct xQeue_val qIN = { .iPosBit = 0, .iPosByte = 0, .bByte = 0, .iTime = 0  };
+    adc_oneshot_unit_handle_t adc1_handle;
+    adc_oneshot_unit_init_cfg_t init_config = {
+        .unit_id = ADC_UNIT_1,
+    };
 
-    BaseType_t xHigherPrioritTaskWoken;
-    BaseType_t xStatus;
-    xHigherPrioritTaskWoken = pdFALSE;
+    adc_oneshot_new_unit(&init_config, &adc1_handle);
 
-    //////////byte a=158; //10011110
-    //        76543210
-    //////////a = a | 0b00100000;
-    //////////print(a); //190
+    adc_oneshot_chan_cfg_t adc_config = {
+        .bitwidth = ADC_BITWIDTH_DEFAULT,
+        .atten = ADC_ATTEN_DB_12,
+    };
 
-    uiCurrentTime = esp_timer_get_time();
-    uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
+    adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_6, &adc_config);
 
-    // long break between signals
-    if (25000 < uiTimeBetweenInterrupts) {
-        /*
-        iLongBreak = 1;        // release lock between messages
-        iSet_preamble = 1;
-        iStream = 0;
-        iCount = 0;
-        iSet_Turnover = 0;
-        */
-       qIN.iTime = (int)uiTimeBetweenInterrupts;
-       qIN.bByte = bByte[iCount_Byte];
-       qIN.iPosByte = iCount_Byte;  
-       qIN.iPosBit = iCount;
-       //strncpy(qIN.bOut, aOut, 80);
-       xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
-       //strncpy(bOut, aOut, 80)
-       //memset (aOut, 0, sizeof(aOut));
-       
-    }
+    gptimer_handle_t gptimer = NULL;
 
-    // -> detect "0"
-    else if (220 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 270) {
+    // Configure timer
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = 1 * 1000 * 1000,
+    };
 
-        if (iLongBreak == 0) {
-            if (iSet_preamble == 0) {
-                if (8 == iCount) {
-                    
-                    if (iCount_Byte == 6) {
+    ESP_LOGI(TAG_ISR, "innend drinnen");
 
-                        iLongBreak = 1;        // release lock between messages
-                        iSet_preamble = 1;
-                        iStream = 0;
-                        iCount_Byte = 0;
+    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
 
-                    } else if (iCount_Byte < 6) {
-                        // complete byte                  
-                        if (iCount_Byte == 0) {
-                            qIN.iTime = (int)uiTimeBetweenInterrupts;
-                            qIN.bByte = bByte[iCount_Byte];
-                            qIN.iPosByte = iCount_Byte;  
-                            qIN.iPosBit = iCount;
-                            xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);
-                            iLongBreak = 1;        // release lock between messages
-                            iSet_preamble = 1;
-                            iStream = 0;
-                            iCount_Byte = 0;
-    
-                        }
+    // set alarm of timer
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = 1000000, // 10usec
+        .reload_count = 0,
+        .flags.auto_reload_on_alarm = true,
+    };
 
-                        iCount_Byte++; // reached stop bit again
-                        bByte[iCount_Byte] |= 0b00000000;
-                    }
-                    iCount = 0;
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
 
-                } else if (iCount < 8) {
-                    bByte[iCount_Byte] &= ~(1 << iCount);
-                    iCount++;
-                }
+    gptimer_enable(gptimer);
+    gptimer_start(gptimer);
 
-            // must is here to detect first stop bit after preamble 
-            } else if (iSet_preamble == 1) {
-                if (iSet_Turnover == 1) {
-
-                    memset(bByte, 0, sizeof(bByte));
-
-                    iCount_Byte = 0;
-                    iCount = 0;
-                    iSet_Turnover = 0;
-                    iSet_preamble = 0;
-
-                    // --->>> turnover works
-                    //qIN.iTime = (int)uiTimeBetweenInterrupts;
-                    //qIN.bByte = bByte[iCount_Byte];
-                    //qIN.iPosByte = iStream;  
-                    //qIN.iPosBit = iStream;
-                    //xStatus = xQueueSendToFrontFromISR(xQueue_Handler,  &qIN, &xHigherPrioritTaskWoken);           
-
-                    bByte[iCount_Byte] |= 0b00000000;
-                    iStream = 0;
-                }
-            }
-        } 
-              
-    }
-
-	// -> detect "1"
-	else if (100 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {
-        
-    
-        if (iLongBreak == 0) {
-            //if (iSet_preamble == 1) {
-            //    iStream++;
-            //    if (13 < iStream && iStream < 20) {
-            //        iSet_Turnover = 1; // preamble done
-            //        iCount = 0;
-            //    } else {
-            //        iSet_Turnover = 0;
-            //    }    
-
-            if (iSet_preamble == 0) {
-                if (iCount == 8) {  // stop here -- on pos #8 "1" is end bit
-                    iCount_Byte = 0;
-                    iCount = 0;
-                    iStream = 0;
-                    iLongBreak = 1;
-                    iSet_preamble = 1;
-                    //memset(bByte, 0, sizeof(bByte));
-                } else if (iCount < 8) {
-                    bByte[iCount_Byte] |= (1 << iCount);
-                    iCount++; 
-                }  
-            }
-        }
-        else if (iLongBreak == 1) {
-            //iLongBreak = 0;        // release lock between messages
-            if (iSet_preamble == 1) {
-                iStream++;
-                if (13 < iStream && iStream < 18) {
-                    iSet_Turnover = 1; // preamble done
-                    iCount = 0;
-                    iLongBreak = 0;   // release lock between messages
-                } 
-            }   
-
-        }            
-    
-    }
-    
-    uiLastInterruptTime = uiCurrentTime;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////
-//////////// tasks for all interrupts //////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////
-void ISR1_feedback(void* arg) {
-
-    struct xQeue_val qOUT;
-    BaseType_t xStatus;
-
-
+    int  oread  = 0;
     while (1) {
+        if (bTrigger) {
+            bTrigger = false;
 
-        xStatus = xQueueReceive(xQueue_Handler, &(qOUT), portMAX_DELAY);
-        if (xStatus == pdTRUE) {
-          //ESP_LOGI(TAG_ISR, "pos : %d, byte : %hhu, time : %d", qOUT.iPos, qOUT.bByte, qOUT.iTime);
-          ESP_LOGI(TAG_ISR, "posBit : %d, posByte : %d, byte : %02X, time : %d", qOUT.iPosBit, qOUT.iPosByte, qOUT.bByte, qOUT.iTime);
-          vTaskDelay(portTICK_PERIOD_MS); // Delay to avoid busy-waiting
-          //xQueueReset(xQueue_Handler);
-          //printf("%s\n", bOut);
-          
-        }
+            uiCurrentTime = esp_timer_get_time();
+            uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
+            adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
+            ESP_LOGI(TAG_ISR, "pos : %d, time : %d", (int)oread, (int)uiTimeBetweenInterrupts);
+
+            uiLastInterruptTime = uiCurrentTime;
+       }
+    vTaskDelay(1);
     }
 }
 
-
-void ISR_1_Einfahrt_handler(void* pvParameters)
-{
-    gpio_config_t io_conf;
-
-    // configure GPIO03_I_MAIN_ISR_1
-    io_conf.intr_type = GPIO_INTR_NEGEDGE;
-    io_conf.pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1);
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
-    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-    gpio_config(&io_conf);
-
-    //ESP_ERROR_CHECK(gpio_install_isr_service(0));
-    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, (void*)GPIO03_I_MAIN_ISR_1));
-
-    ESP_LOGI(TAG_ISR, "ISR 1 handler");
-    //while (1) {
-    //    vTaskDelay (10/portTICK_PERIOD_MS);
-    //    // vTaskDelay(1);
-    //}
-
-    vTaskDelete(NULL);
-}
-
-
-////////////////////////////////////////////////////////////////////////////////////////////
-// SPI setup
-////////////////////////////////////////////////////////////////////////////////////////////
-static void spi_app_start(void) {
-    // Initialize SPI bus
-    spi_bus_config_t buscfg = {
-        .miso_io_num = GPIO15_I_SPI_MISO,
-        .mosi_io_num = GPIO13_O_SPI_MOSI,
-        .sclk_io_num = GPIO14_O_SPI_SCK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 4096,
-    };
-
-    ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_initialize(HSPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
-    spi_device_handle_t spi_handle;
-
-    // Configure SPI device interface
-    spi_device_interface_config_t devcfg = {
-        .command_bits = 0,
-        .address_bits = 0,
-        .dummy_bits = 0,
-        .mode = 0,
-        .duty_cycle_pos = 128,
-        .cs_ena_pretrans = 0,
-        .cs_ena_posttrans = 0,
-        .clock_speed_hz = 1 * 1000 * 1000,
-        .spics_io_num = GPIO23_O_SPI_CS,
-        .flags = 0,
-        .queue_size = 1,
-    };
-
-    ESP_ERROR_CHECK_WITHOUT_ABORT(spi_bus_add_device(HSPI_HOST, &devcfg, &spi_handle));
-
-    eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
-    eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
-}
-////////////////////////////////////////////////////////////////////////////////////////////
-// Ethernet setup
-////////////////////////////////////////////////////////////////////////////////////////////
- /** Event handler for Ethernet events */
-static void eth_event_handler(void *arg, esp_event_base_t event_base,
-                              int32_t event_id, void *event_data)
-{
-    uint8_t mac_addr[6] = {0};
-    /* we can get the ethernet driver handle from event data */
-    esp_eth_handle_t eth_handle = *(esp_eth_handle_t *)event_data;
-
-    switch (event_id) {
-    case ETHERNET_EVENT_CONNECTED:
-        esp_eth_ioctl(eth_handle, ETH_CMD_G_MAC_ADDR, mac_addr);
-        ESP_LOGI(TAG_ETH, "Ethernet Link Up");
-        ESP_LOGI(TAG_ETH, "Ethernet HW Addr %02x:%02x:%02x:%02x:%02x:%02x",
-                 mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-        break;
-    case ETHERNET_EVENT_DISCONNECTED:
-        ESP_LOGI(TAG_ETH, "Ethernet Link Down");
-        break;
-    case ETHERNET_EVENT_START:
-        ESP_LOGI(TAG_ETH, "Ethernet Started");
-        break;
-    case ETHERNET_EVENT_STOP:
-        ESP_LOGI(TAG_ETH, "Ethernet Stopped");
-        break;
-    default:
-        break;
-    }
-}
-
-/** Event handler for IP_EVENT_ETH_GOT_IP */
-static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
-                                 int32_t event_id, void *event_data)
-{
-    ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
-    const esp_netif_ip_info_t *ip_info = &event->ip_info;
-
-    ESP_LOGI(TAG_ETH, "Ethernet Got IP Address");
-    ESP_LOGI(TAG_ETH, "~~~~~~~~~~~");
-    ESP_LOGI(TAG_ETH, "ETHIP:" IPSTR, IP2STR(&ip_info->ip));
-    ESP_LOGI(TAG_ETH, "ETHMASK:" IPSTR, IP2STR(&ip_info->netmask));
-    ESP_LOGI(TAG_ETH, "ETHGW:" IPSTR, IP2STR(&ip_info->gw));
-    ESP_LOGI(TAG_ETH, "~~~~~~~~~~~");
-}
-////////////////////////////////////////////////////////////////////////////////////////////
-// PWM setup
-////////////////////////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////////////////////////
-// MQTT setup
-////////////////////////////////////////////////////////////////////////////////////////////
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
-{
-    ESP_LOGD(TAG_MQTT, "Event dispatched from event loop base=%s, event_id=%" PRIi32 "", base, event_id);
-    esp_mqtt_event_handle_t event = event_data;
-    esp_mqtt_client_handle_t client = event->client;
-    int msg_id;
-    switch ((esp_mqtt_event_id_t)event_id) {
-    case MQTT_EVENT_CONNECTED:
-        ESP_LOGI(TAG_MQTT, "MQTT_EVENT_CONNECTED");
-        msg_id = esp_mqtt_client_publish(client, "/topic/qos1", "data_3", 0, 1, 0);
-        ESP_LOGI(TAG_MQTT, "sent publish successful, msg_id=%d", msg_id);
-
-        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
-        ESP_LOGI(TAG_MQTT, "sent subscribe successful, msg_id=%d", msg_id);
-
-        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
-        ESP_LOGI(TAG_MQTT, "sent subscribe successful, msg_id=%d", msg_id);
-
-        msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
-        ESP_LOGI(TAG_MQTT, "sent unsubscribe successful, msg_id=%d", msg_id);
-        break;
-    case MQTT_EVENT_DISCONNECTED:
-        ESP_LOGI(TAG_MQTT, "MQTT_EVENT_DISCONNECTED");
-        break;
-
-    case MQTT_EVENT_SUBSCRIBED:
-        ESP_LOGI(TAG_MQTT, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-        msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "data", 0, 0, 0);
-        ESP_LOGI(TAG_MQTT, "sent publish successful, msg_id=%d", msg_id);
-        break;
-    case MQTT_EVENT_UNSUBSCRIBED:
-        ESP_LOGI(TAG_MQTT, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_PUBLISHED:
-        ESP_LOGI(TAG_MQTT, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_DATA:
-        ESP_LOGI(TAG_MQTT, "MQTT_EVENT_DATA");
-        ESP_LOGI(TAG_MQTT, "TOPIC=%.*s\r\n", event->topic_len, event->topic);
-        ESP_LOGI(TAG_MQTT, "DATA=%.*s\r\n", event->data_len, event->data);
-        break;
-    case MQTT_EVENT_ERROR:
-        ESP_LOGI(TAG_MQTT, "MQTT_EVENT_ERROR");
-        if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
-            log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
-            log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
-            log_error_if_nonzero("captured as transport's socket errno",  event->error_handle->esp_transport_sock_errno);
-            ESP_LOGI(TAG_MQTT, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
-
-        }
-        break;
-    default:
-        ESP_LOGI(TAG_MQTT, "Other event id:%d", event->event_id);
-        break;
-    }
-}
-
-void  mqtt_app_start(void) {
-    esp_mqtt_client_config_t mqtt_cfg = {
-      .broker.address.uri = "mqtts://mqtt.example.com:1883",
-      .credentials.username = "user",
-      .credentials.authentication.password = "pass",
-      .credentials.client_id = "esp32_client",
-      .session.last_will.topic = "/lwt",
-      .session.last_will.msg = "offline",
-      .session.last_will.qos = 1,
-      .session.last_will.retain = 1};
-    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
-    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
-    esp_mqtt_client_start(client);  // Start the MQTT client
-
-
-    vTaskDelete(NULL);
-    //https://github.com/tuanpmt/esp32-mqtt/blob/master/main/app_main.c#L124
-    //https://medium.com/gravio-edge-iot-platform/how-to-set-up-a-mosquitto-mqtt-broker-securely-using-client-certificates-82b2aaaef9c8
-    //https://stackoverflow.com/questions/34693520/mqtt-server-with-ssl-tls-error-unable-to-load-server-key-file
-}
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Main
 ////////////////////////////////////////////////////////////////////////////////////////////
 void app_main(void)
 {
-    //struct xQeue_val a = { .iPos = 1, .bByte = 0, .iTime = 1 };
+    struct xQeue_val a = { .iPos = 1, .bByte = 0, .iTime = 1 };
 
     esp_log_level_set("TAG_ISR", ESP_LOG_INFO);
-    //ESP_LOGI(TAG_ISR, "a.iAmount %d, a.iSet %d, a.iTime %d", a.iAmount, a.iSet, a.iTime);
-
-    //xQueue_Handler = xQueueCreate (10, sizeof(struct xQeue_val * ));
     xQueue_Handler = xQueueCreate (10, sizeof(xQeue_val));
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -502,35 +193,12 @@ void app_main(void)
     esp_rom_gpio_pad_select_gpio(GPIO13_O_SPI_MOSI);      gpio_set_direction(GPIO13_O_SPI_MOSI,   GPIO_MODE_OUTPUT);
     esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_INPUT);
 
-    //  create here tasks
-    // vTaskDelay (10/portTICK_PERIOD_MS);
-
-/*
-
-    gpio_config_t io_conf;
-
-    io_conf.intr_type = GPIO_INTR_NEGEDGE;
-    io_conf.pin_bit_mask = (1ULL << GPIO03_I_MAIN_ISR_1);
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
-    io_conf.pull_down_en = GPIO_PULLUP_ENABLE;
-
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
-
-    // pin to core "0"
     //xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
-    // configure GPIO03_I_MAIN_ISR_1
-    gpio_config(&io_conf);
-    ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO03_I_MAIN_ISR_1, ISR_1_Einfahrt, (void*)GPIO03_I_MAIN_ISR_1));
+    //xTaskCreatePinnedToCore(ISR1_feedback,          "ISR1_feedback",  2048, NULL, 5, NULL, 0);
 
-*/
-
-
-
-
-    ESP_ERROR_CHECK(gpio_install_isr_service(0));
-    xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(ISR1_feedback,          "ISR1_feedback",  2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_1_Timer_handler, "ISR_1_Timer_handler", 2048, NULL, 5, NULL, 0);
+    //xTaskCreatePinnedToCore(ISR1_Timer_feedback, "ISR1_Timer_feedback", 2048, NULL, 5, NULL, 0);
 
     iCount = 0;
 
