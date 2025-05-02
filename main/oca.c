@@ -43,6 +43,9 @@ static const char *TAG_MQTT = "mqtt_example";
 static const char *TAG_ETH  = "eth_example";
 static const char *TAG_ISR  = "isr_example";
 
+
+adc_oneshot_unit_handle_t adc1_handle;
+TaskHandle_t adc_task_handle = NULL;
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Semaphore + ISR hanlde setup
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,67 +78,28 @@ QueueHandle_t xQueue_Handler;
 //====================================================================================================================
 //====================================================================================================================
 //====================================================================================================================
-static void IRAM_ATTR ISR_1_Timer(void *args)
-{
-    bTrigger = true;
-}    
 
 void ISR_1_Timer_handler(void* pvParameters)
 {
-
-    adc_oneshot_unit_handle_t adc1_handle;
-    adc_oneshot_unit_init_cfg_t init_config = {
-        .unit_id = ADC_UNIT_1,
-    };
-
-    adc_oneshot_new_unit(&init_config, &adc1_handle);
-
-    adc_oneshot_chan_cfg_t adc_config = {
-        .bitwidth = ADC_BITWIDTH_DEFAULT,
-        .atten = ADC_ATTEN_DB_12,
-    };
-
-    adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_6, &adc_config);
-
-    gptimer_handle_t gptimer = NULL;
-
-    // Configure timer
-    gptimer_config_t timer_config = {
-        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
-        .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = 1 * 1000 * 1000,
-    };
-
-    ESP_LOGI(TAG_ISR, "innend drinnen");
-
-    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
-
-    // set alarm of timer
-    gptimer_alarm_config_t alarm_config = {
-        .alarm_count = 1000000, // 10usec
-        .reload_count = 0,
-        .flags.auto_reload_on_alarm = true,
-    };
-
-    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
-
-    gptimer_enable(gptimer);
-    gptimer_start(gptimer);
-
     int  oread  = 0;
     while (1) {
-        if (bTrigger) {
-            bTrigger = false;
 
-            uiCurrentTime = esp_timer_get_time();
-            uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
-            adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
-            ESP_LOGI(TAG_ISR, "pos : %d, time : %d", (int)oread, (int)uiTimeBetweenInterrupts);
+        uiCurrentTime = esp_timer_get_time();
+        uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
 
-            uiLastInterruptTime = uiCurrentTime;
-       }
-    vTaskDelay(1);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
+        ESP_LOGI(TAG_ISR, "pos : %d, time : %d", (int)oread, (int)uiTimeBetweenInterrupts);
+
+        uiLastInterruptTime = uiCurrentTime;
+
     }
+}
+
+bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx) {
+    BaseType_t high_task_wakeup = pdFALSE;
+    vTaskNotifyGiveFromISR(adc_task_handle, &high_task_wakeup);
+    return high_task_wakeup == pdTRUE;;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -193,11 +157,53 @@ void app_main(void)
     esp_rom_gpio_pad_select_gpio(GPIO13_O_SPI_MOSI);      gpio_set_direction(GPIO13_O_SPI_MOSI,   GPIO_MODE_OUTPUT);
     esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_INPUT);
 
+    //adc_oneshot_unit_handle_t adc1_handle;
+    adc_oneshot_unit_init_cfg_t init_config = {
+        .unit_id = ADC_UNIT_1,
+    };
+    adc_oneshot_new_unit(&init_config, &adc1_handle);
+
+    adc_oneshot_chan_cfg_t chan_config = {
+        .bitwidth = ADC_BITWIDTH_DEFAULT,
+        .atten = ADC_ATTEN_DB_12,
+    };
+    adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_6, &chan_config);
+
+    gptimer_handle_t gptimer = NULL;
+
+    // Configure timer
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = 1 * 1000 * 1000,
+    };
+
+    ESP_LOGI(TAG_ISR, "innend drinnen");
+
+    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
+
+    // set alarm of timer
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = 1000000, // 10usec
+        .reload_count = 0,
+        .flags.auto_reload_on_alarm = true,
+    };
+
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
+
+    gptimer_event_callbacks_t cbs = {
+        .on_alarm = timer_callback,
+    };
+
+    gptimer_enable(gptimer);
+    gptimer_start(gptimer);
+
+
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
     //xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
     //xTaskCreatePinnedToCore(ISR1_feedback,          "ISR1_feedback",  2048, NULL, 5, NULL, 0);
 
-    xTaskCreatePinnedToCore(ISR_1_Timer_handler, "ISR_1_Timer_handler", 2048, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(ISR_1_Timer_handler, "ISR_1_Timer_handler", 2048, NULL, 5, &adc_task_handle, 0);
     //xTaskCreatePinnedToCore(ISR1_Timer_feedback, "ISR1_Timer_feedback", 2048, NULL, 5, NULL, 0);
 
     iCount = 0;
