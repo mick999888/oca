@@ -161,7 +161,7 @@ void app_main(void)
     adc_oneshot_unit_init_cfg_t init_config = {
         .unit_id = ADC_UNIT_1,
     };
-    adc_oneshot_new_unit(&init_config, &adc1_handle);
+    ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config, &adc1_handle));
 
     adc_oneshot_chan_cfg_t chan_config = {
         .bitwidth = ADC_BITWIDTH_DEFAULT,
@@ -180,7 +180,6 @@ void app_main(void)
     );
 
     gptimer_handle_t gptimer = NULL;
-
     // Configure timer
     gptimer_config_t timer_config = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
@@ -189,24 +188,21 @@ void app_main(void)
     };
     ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
 
-    // set alarm of timer
-    gptimer_alarm_config_t alarm_config = {
-        .alarm_count = 1000000, // 1 sec
-        .reload_count = 0,
-        .flags.auto_reload_on_alarm = true,
-    };
-    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
-
     gptimer_event_callbacks_t cbs = {
         .on_alarm = timer_callback,
     };
     ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
 
+    // set alarm of timer
     gptimer_alarm_config_t alarm_config = {
-        .alarm_count = 1000000,
+        .alarm_count = 1000000, // 1 sec    
         .reload_count = 0,
+        .flags.auto_reload_on_alarm = true,
+    };
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
 
-    }
+
+
 
     gptimer_enable(gptimer);
     gptimer_start(gptimer);
