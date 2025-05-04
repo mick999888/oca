@@ -88,7 +88,7 @@ void ISR_1_Timer_handler(void* pvParameters)
         uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
 
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
+        //adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
         ESP_LOGI(TAG_ISR, "pos : %d, time : %d", (int)oread, (int)uiTimeBetweenInterrupts);
 
         uiLastInterruptTime = uiCurrentTime;
@@ -167,7 +167,17 @@ void app_main(void)
         .bitwidth = ADC_BITWIDTH_DEFAULT,
         .atten = ADC_ATTEN_DB_12,
     };
-    adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_6, &chan_config);
+    ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_6, &chan_config));
+
+    xTaskCreatePinnedToCore(
+        ISR_1_Timer_handler, 
+        "ISR_1_Timer_handler", 
+        2048, 
+        NULL, 
+        5, 
+        &adc_task_handle, 
+        0
+    );
 
     gptimer_handle_t gptimer = NULL;
 
@@ -175,25 +185,28 @@ void app_main(void)
     gptimer_config_t timer_config = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
         .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = 1 * 1000 * 1000,
+        .resolution_hz = 1 * 1000 * 1000, // 1 tick = 1us
     };
-
-    ESP_LOGI(TAG_ISR, "innend drinnen");
-
     ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
 
     // set alarm of timer
     gptimer_alarm_config_t alarm_config = {
-        .alarm_count = 1000000, // 10usec
+        .alarm_count = 1000000, // 1 sec
         .reload_count = 0,
         .flags.auto_reload_on_alarm = true,
     };
-
     ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
 
     gptimer_event_callbacks_t cbs = {
         .on_alarm = timer_callback,
     };
+    ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
+
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = 1000000,
+        .reload_count = 0,
+
+    }
 
     gptimer_enable(gptimer);
     gptimer_start(gptimer);
@@ -203,7 +216,7 @@ void app_main(void)
     //xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
     //xTaskCreatePinnedToCore(ISR1_feedback,          "ISR1_feedback",  2048, NULL, 5, NULL, 0);
 
-    xTaskCreatePinnedToCore(ISR_1_Timer_handler, "ISR_1_Timer_handler", 2048, NULL, 5, &adc_task_handle, 0);
+    
     //xTaskCreatePinnedToCore(ISR1_Timer_feedback, "ISR1_Timer_feedback", 2048, NULL, 5, NULL, 0);
 
     iCount = 0;
