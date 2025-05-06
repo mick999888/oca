@@ -28,6 +28,8 @@
 #include "nvs_flash.h"
 #include "rom/ets_sys.h"
 #include "rtc_wdt.h"
+#include <esp_task_wdt.h>
+
 //#include "ledc.h"
 
 #include "defines.h"
@@ -86,7 +88,7 @@ void ISR_1_Timer_handler(void* pvParameters)
     while (1) {
 
         uiCurrentTime = esp_timer_get_time();
-        uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
+        // uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
 
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
@@ -96,13 +98,21 @@ void ISR_1_Timer_handler(void* pvParameters)
         } 
 
         else if (iBufVal < oread) {
-            if (iSetBig == 1) {
-                iSetBig = 0;
-                ESP_LOGI(TAG_ISR, "iBufVal : %d < oread : %d,  time : %d", (int)iBufVal, (int)oread, (int)uiTimeBetweenInterrupts);
+            uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
+            if (105 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {   
+                if (iSetBig == 1) {
+                    iSetBig = 0;
+                    ESP_LOGI(TAG_ISR, "iBufVal : %d < oread : %d,  time : %d", (int)iBufVal, (int)oread, (int)uiTimeBetweenInterrupts);
+                }
+            } else if (210  < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) { 
+                if (iSetBig == 1) {
+                    iSetBig = 0;
+                    ESP_LOGI(TAG_ISR, "iBufVal : %d < oread : %d,  time : %d", (int)iBufVal, (int)oread, (int)uiTimeBetweenInterrupts);
+                }
             }
         }
         
-
+        esp_task_wdt_reset();
         iBufVal = oread;
         uiLastInterruptTime = uiCurrentTime;
 
@@ -191,6 +201,19 @@ void app_main(void)
         &adc_task_handle, 
         0
     );
+    esp_task_wdt_config_t twdt_config = {
+        .timeout_ms = 3,
+        .idle_core_mask = (1 << CONFIG_FREERTOS_NUMBER_OF_CORES) - 1,    // Bitmask of all cores
+        .trigger_panic = false,
+    };
+    ESP_ERROR_CHECK(esp_task_wdt_init(&twdt_config));
+    // Initialize the Task Watchdog Timer with a timeout of 10 seconds
+    
+
+    // Add the current task to the TWDT
+    ESP_ERROR_CHECK(esp_task_wdt_add(ISR_1_Timer_handler));
+
+
 
     gptimer_handle_t gptimer = NULL;
     // Configure timer
