@@ -26,6 +26,9 @@ volatile int        i_8_BUTTON                 = 0;
 
 bool bTrigger = false;
 
+volatile int  iBufVal   = 10000;
+volatile int  iSetBig   = 0;
+
 volatile uint8_t bByte[10];
 volatile unsigned char aOut[80];
 volatile unsigned char bOut[80];

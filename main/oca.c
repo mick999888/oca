@@ -82,15 +82,28 @@ QueueHandle_t xQueue_Handler;
 void ISR_1_Timer_handler(void* pvParameters)
 {
     int  oread  = 0;
+    int  iResult = 0;
     while (1) {
 
         uiCurrentTime = esp_timer_get_time();
         uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
 
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        //adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
-        ESP_LOGI(TAG_ISR, "pos : %d, time : %d", (int)oread, (int)uiTimeBetweenInterrupts);
+        adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
+        
+        if (iBufVal > oread) {
+            iSetBig = 1;
+        } 
 
+        else if (iBufVal < oread) {
+            if (iSetBig == 1) {
+                iSetBig = 0;
+                ESP_LOGI(TAG_ISR, "iBufVal : %d < oread : %d,  time : %d", (int)iBufVal, (int)oread, (int)uiTimeBetweenInterrupts);
+            }
+        }
+        
+
+        iBufVal = oread;
         uiLastInterruptTime = uiCurrentTime;
 
     }
@@ -203,7 +216,7 @@ void app_main(void)
 
 
 
-
+    
     gptimer_enable(gptimer);
     gptimer_start(gptimer);
 

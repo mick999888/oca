@@ -34,6 +34,9 @@ extern volatile int        i_6_MAIN1;
 extern volatile int        i_7_MAIN2;
 extern volatile int        i_8_BUTTON;
 
+extern volatile int        iBufVal;
+extern volatile int        iSetBig;
+
 extern volatile uint8_t bByte[10];
 extern volatile unsigned char aOut[80];
 extern volatile unsigned char bOut[80];
