@@ -33,4 +33,7 @@ volatile uint8_t bByte[10];
 volatile unsigned char aOut[80];
 volatile unsigned char bOut[80];
 
+volatile unsigned int iBufOUT[10];
+volatile unsigned int iAverageBuf;
+
 //volatile adc_oneshot_unit_handle_t adc1_handle;

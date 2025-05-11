@@ -83,8 +83,18 @@ QueueHandle_t xQueue_Handler;
 
 void ISR_1_Timer_handler(void* pvParameters)
 {
-    int  oread  = 0;
-    int  iResult = 0;
+    int  oread   = 0;
+    int  iSum = 0, iAverageNow = 0;
+    int  iCnt    = 0;
+    int  iBufIN[10];
+
+    esp_task_wdt_config_t twdt_config = {
+        .timeout_ms = 3,
+        .idle_core_mask = (1 << CONFIG_FREERTOS_NUMBER_OF_CORES) - 1,    // Bitmask of all cores
+        .trigger_panic = false,
+    };
+    ESP_ERROR_CHECK(esp_task_wdt_init(&twdt_config));
+
     while (1) {
 
         uiCurrentTime = esp_timer_get_time();
@@ -93,28 +103,44 @@ void ISR_1_Timer_handler(void* pvParameters)
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
         
-        if (iBufVal > oread) {
+        for (iCnt = 0; iCnt < 10; iCnt++) {
+            if (iCnt == 0) 
+                iBufIN[iCnt] = oread;
+            else
+                iBufIN[iCnt] = iBufOUT[iCnt - 1];
+
+            iSum += iBufIN[iCnt];                
+        }
+
+        iAverageNow = iSum / 10;
+
+
+
+        if (iAverageNow > iAverageBuf) {
             iSetBig = 1;
         } 
 
-        else if (iBufVal < oread) {
+        else if (iAverageNow < iAverageBuf) {
             uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
-            if (105 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {   
-                if (iSetBig == 1) {
-                    iSetBig = 0;
-                    ESP_LOGI(TAG_ISR, "iBufVal : %d < oread : %d,  time : %d", (int)iBufVal, (int)oread, (int)uiTimeBetweenInterrupts);
+            if (iSetBig == 1) {
+                if (105 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {   
+                    ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
+                } else if (210  < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) { 
+                    ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
                 }
-            } else if (210  < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) { 
-                if (iSetBig == 1) {
-                    iSetBig = 0;
-                    ESP_LOGI(TAG_ISR, "iBufVal : %d < oread : %d,  time : %d", (int)iBufVal, (int)oread, (int)uiTimeBetweenInterrupts);
-                }
+                iSetBig = 0;
             }
         }
         
         esp_task_wdt_reset();
         iBufVal = oread;
         uiLastInterruptTime = uiCurrentTime;
+
+        for (iCnt = 0; iCnt < 10; iCnt++) {
+            iBufOUT[iCnt] = iBufIN[iCnt];
+        }
+
+        iAverageBuf = iAverageNow;
 
     }
 }
@@ -201,19 +227,6 @@ void app_main(void)
         &adc_task_handle, 
         0
     );
-    esp_task_wdt_config_t twdt_config = {
-        .timeout_ms = 3,
-        .idle_core_mask = (1 << CONFIG_FREERTOS_NUMBER_OF_CORES) - 1,    // Bitmask of all cores
-        .trigger_panic = false,
-    };
-    ESP_ERROR_CHECK(esp_task_wdt_init(&twdt_config));
-    // Initialize the Task Watchdog Timer with a timeout of 10 seconds
-    
-
-    // Add the current task to the TWDT
-    ESP_ERROR_CHECK(esp_task_wdt_add(ISR_1_Timer_handler));
-
-
 
     gptimer_handle_t gptimer = NULL;
     // Configure timer

@@ -43,6 +43,9 @@ extern volatile unsigned char bOut[80];
 
 extern bool bTrigger;
 
+extern volatile unsigned int iBufOUT[10];
+extern volatile unsigned int iAverageBuf;
+
 //extern adc_oneshot_unit_handle_t adc1_handle;
 
 #endif
