@@ -88,12 +88,7 @@ void ISR_1_Timer_handler(void* pvParameters)
     int  iCnt    = 0;
     int  iBufIN[10];
 
-    esp_task_wdt_config_t twdt_config = {
-        .timeout_ms = 3,
-        .idle_core_mask = (1 << CONFIG_FREERTOS_NUMBER_OF_CORES) - 1,    // Bitmask of all cores
-        .trigger_panic = false,
-    };
-    ESP_ERROR_CHECK(esp_task_wdt_init(&twdt_config));
+    esp_task_wdt_add(NULL);
 
     while (1) {
 
@@ -228,6 +223,14 @@ void app_main(void)
         0
     );
 
+    esp_task_wdt_config_t twdt_config = {
+        .timeout_ms = 3000,
+        .idle_core_mask = (1<<0),
+        .trigger_panic = false,
+    };
+    ESP_ERROR_CHECK(esp_task_wdt_init(&twdt_config));
+
+
     gptimer_handle_t gptimer = NULL;
     // Configure timer
     gptimer_config_t timer_config = {
@@ -249,6 +252,8 @@ void app_main(void)
         .flags.auto_reload_on_alarm = true,
     };
     ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
+
+
 
 
 
