@@ -88,6 +88,8 @@ void ISR_1_Timer_handler(void* pvParameters)
     int  iCnt    = 0;
     int  iBufIN[10];
 
+    ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
+
     esp_task_wdt_add(NULL);
 
     while (1) {
@@ -127,7 +129,7 @@ void ISR_1_Timer_handler(void* pvParameters)
             }
         }
         
-        esp_task_wdt_reset();
+        //esp_task_wdt_reset();
         iBufVal = oread;
         uiLastInterruptTime = uiCurrentTime;
 
@@ -223,13 +225,8 @@ void app_main(void)
         0
     );
 
-    esp_task_wdt_config_t twdt_config = {
-        .timeout_ms = 3000,
-        .idle_core_mask = (1<<0),
-        .trigger_panic = false,
-    };
-    ESP_ERROR_CHECK(esp_task_wdt_init(&twdt_config));
-
+    //===============================================================
+    //======== timer ================================================
 
     gptimer_handle_t gptimer = NULL;
     // Configure timer
@@ -252,15 +249,19 @@ void app_main(void)
         .flags.auto_reload_on_alarm = true,
     };
     ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
-
-
-
-
-
     
     gptimer_enable(gptimer);
     gptimer_start(gptimer);
 
+
+
+    ESP_ERROR_CHECK(esp_task_wdt_deinit());
+    esp_task_wdt_config_t twdt_config = {
+        .timeout_ms = 3000,
+        .idle_core_mask = (1<<0),
+        .trigger_panic = false,
+    };
+    ESP_ERROR_CHECK(esp_task_wdt_init(&twdt_config));    
 
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
     //xTaskCreatePinnedToCore(ISR_1_Einfahrt_handler, "ISR_1_Einfahrt_handler",   2048, NULL, 5, NULL, 0);
