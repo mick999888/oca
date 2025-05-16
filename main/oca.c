@@ -90,7 +90,7 @@ void ISR_1_Timer_handler(void* pvParameters)
 
     
 
-    esp_task_wdt_add(NULL);
+    //esp_task_wdt_add(NULL);
 
     while (1) {
 
@@ -131,7 +131,7 @@ void ISR_1_Timer_handler(void* pvParameters)
             }
         }
         
-        esp_task_wdt_reset();
+        //esp_task_wdt_reset();
         iBufVal = oread;
         uiLastInterruptTime = uiCurrentTime;
 
@@ -141,12 +141,24 @@ void ISR_1_Timer_handler(void* pvParameters)
 
         iAverageBuf = iAverageNow;
 
+        vTaskDelay(1000/portTICK_PERIOD_MS);
+
     }
 }
 
 bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx) {
+
+
+    int  oread   = 0;
+    int  iSum = 0, iAverageNow = 0;
+    int  iCnt    = 0;
+    int  iBufIN[10];
+
+
     BaseType_t high_task_wakeup = pdFALSE;
-    vTaskNotifyGiveFromISR(adc_task_handle, &high_task_wakeup);
+    //vTaskNotifyGiveFromISR(adc_task_handle, &high_task_wakeup);
+    
+    adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
     return high_task_wakeup == pdTRUE;;
 }
 
@@ -259,7 +271,7 @@ void app_main(void)
 
     //ESP_ERROR_CHECK(esp_task_wdt_deinit());
     esp_task_wdt_config_t twdt_config = {
-        .timeout_ms = 3000,
+        .timeout_ms = 500,
         .idle_core_mask = (1<<0),
         .trigger_panic = false,
     };
