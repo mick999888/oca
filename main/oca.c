@@ -94,24 +94,27 @@ void ISR_1_Timer_handler(void* pvParameters)
 
     while (1) {
 
-        //ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
-
         uiCurrentTime = esp_timer_get_time();
-        // uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
+        uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
 
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
-        
-        for (iCnt = 0; iCnt < 10; iCnt++) {
-            if (iCnt == 0) 
-                iBufIN[iCnt] = oread;
-            else
-                iBufIN[iCnt] = iBufOUT[iCnt - 1];
 
-            iSum += iBufIN[iCnt];                
+        ESP_LOGI(TAG_ISR, "oread : %d < iAverageBuf : %d,  time : %d", (int)oread, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);                     
+
+        if (oread < 1600) {
+           for (iCnt = 0; iCnt < 10; iCnt++) {
+                if (iCnt == 0) 
+                    iBufIN[iCnt] = oread;
+                else
+                    iBufIN[iCnt] = iBufOUT[iCnt - 1];
+
+                iSum += iBufIN[iCnt];                
+            }
+            iAverageNow = iSum / 10;
+        } else {
+            iAverageNow = 0;
         }
-
-        iAverageNow = iSum / 10;
 
 
 
@@ -131,7 +134,7 @@ void ISR_1_Timer_handler(void* pvParameters)
             }
         }
         
-        //esp_task_wdt_reset();
+        // esp_task_wdt_reset();
         iBufVal = oread;
         uiLastInterruptTime = uiCurrentTime;
 
@@ -141,24 +144,15 @@ void ISR_1_Timer_handler(void* pvParameters)
 
         iAverageBuf = iAverageNow;
 
-        vTaskDelay(1000/portTICK_PERIOD_MS);
+        vTaskDelay(10/portTICK_PERIOD_MS);
 
     }
 }
 
 bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx) {
 
-
-    int  oread   = 0;
-    int  iSum = 0, iAverageNow = 0;
-    int  iCnt    = 0;
-    int  iBufIN[10];
-
-
     BaseType_t high_task_wakeup = pdFALSE;
-    //vTaskNotifyGiveFromISR(adc_task_handle, &high_task_wakeup);
-    
-    adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
+    vTaskNotifyGiveFromISR(adc_task_handle, &high_task_wakeup);
     return high_task_wakeup == pdTRUE;;
 }
 
@@ -247,7 +241,7 @@ void app_main(void)
     gptimer_config_t timer_config = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
         .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = 1 * 1000 * 1000, // 1 tick = 1us
+        .resolution_hz = 1000000, // 1 tick = 1us
     };
     ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
 
@@ -258,7 +252,7 @@ void app_main(void)
 
     // set alarm of timer
     gptimer_alarm_config_t alarm_config = {
-        .alarm_count = 1000000, // 1 sec    
+        .alarm_count = 1000, // 1 sec    
         .reload_count = 0,
         .flags.auto_reload_on_alarm = true,
     };
