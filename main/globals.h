@@ -38,10 +38,10 @@ extern volatile int        iBufVal;
 extern volatile int        iSetBig;
 
 extern volatile uint8_t bByte[10];
-extern volatile unsigned char aOut[80];
-extern volatile unsigned char bOut[80];
 
 extern bool bTrigger;
+
+extern volatile bool bResult[100];
 
 extern volatile unsigned int iBufOUT[10];
 extern volatile unsigned int iAverageBuf;

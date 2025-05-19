@@ -45,6 +45,9 @@ static const char *TAG_MQTT = "mqtt_example";
 static const char *TAG_ETH  = "eth_example";
 static const char *TAG_ISR  = "isr_example";
 
+// queues defined
+static QueueHandle_t queue_result = NULL;
+
 
 adc_oneshot_unit_handle_t adc1_handle;
 TaskHandle_t adc_task_handle = NULL;
@@ -94,57 +97,70 @@ void ISR_1_Timer_handler(void* pvParameters)
 
     while (1) {
 
-        uiCurrentTime = esp_timer_get_time();
-        uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
 
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
 
-        ESP_LOGI(TAG_ISR, "oread : %d < iAverageBuf : %d,  time : %d", (int)oread, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);                     
+        //ESP_LOGI(TAG_ISR, "oread : %d < iAverageBuf : %d,  time : %d", (int)oread, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);                     
 
         if (oread < 1600) {
-           for (iCnt = 0; iCnt < 10; iCnt++) {
-                if (iCnt == 0) 
-                    iBufIN[iCnt] = oread;
-                else
-                    iBufIN[iCnt] = iBufOUT[iCnt - 1];
 
-                iSum += iBufIN[iCnt];                
+            // measure gab
+            uiCurrentTime = esp_timer_get_time();
+
+            // calc average
+            for (iCnt = 0; iCnt < 10; iCnt++) {
+                if (iCnt == 0)      iBufIN[iCnt] = oread;
+                else                iBufIN[iCnt] = iBufOUT[iCnt - 1];
+                iSum += iBufIN[iCnt];
             }
             iAverageNow = iSum / 10;
+
+            if (iAverageNow > iAverageBuf) {
+                iSetBig = 1;
+            }
+
+            else if (iAverageNow < iAverageBuf) {
+                //uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
+                if (iSetBig == 1) {
+                    uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
+
+                    if (uiTimeBetweenInterrupts > 20000) {
+                        xQueueSend(queue_result, bResult, portMAX_DELAY);
+                        memset(bResult, 0, sizeof(bResult));
+                        iCnt = 0;
+                    } else {
+
+                        if     (105 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {
+                            bResult[iCnt] = true;
+                            iCnt++;
+                            //ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
+                        }
+                        else if (210 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 240) {
+                            bResult[iCnt] = false;
+                            iCnt++;
+                            //ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
+                        }
+                        iSetBig = 0;
+                        uiLastInterruptTime = uiCurrentTime;
+                    }
+                }
+            }
+
+            // esp_task_wdt_reset();
+
+            for (iCnt = 0; iCnt < 10; iCnt++) {
+                iBufOUT[iCnt] = iBufIN[iCnt];
+            }
+
+            iAverageBuf = iAverageNow;
+
         } else {
+
             iAverageNow = 0;
         }
 
-
-
-        if (iAverageNow > iAverageBuf) {
-            iSetBig = 1;
-        } 
-
-        else if (iAverageNow < iAverageBuf) {
-            uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
-            if (iSetBig == 1) {
-                if (105 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {   
-                    ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
-                } else if (210  < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) { 
-                    ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
-                }
-                iSetBig = 0;
-            }
-        }
-        
-        // esp_task_wdt_reset();
-        iBufVal = oread;
-        uiLastInterruptTime = uiCurrentTime;
-
-        for (iCnt = 0; iCnt < 10; iCnt++) {
-            iBufOUT[iCnt] = iBufIN[iCnt];
-        }
-
-        iAverageBuf = iAverageNow;
-
-        vTaskDelay(10/portTICK_PERIOD_MS);
+     vTaskDelay(10/portTICK_PERIOD_MS);
 
     }
 }
@@ -280,6 +296,7 @@ void app_main(void)
 
     iCount = 0;
 
+    queue_result = xQueueCreate(100, sizeof(bool) * 100);
 
     // pin to core "1"
     // xTaskCreatePinnedToCore(mqtt_app_start, "mqtt_app_start", 4096, NULL, 5, NULL, 1);
