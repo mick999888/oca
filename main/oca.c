@@ -48,9 +48,10 @@ static const char *TAG_ISR  = "isr_example";
 // queues defined
 static QueueHandle_t queue_result = NULL;
 
+// tasks defined
+TaskHandle_t handle_task_adc = NULL;
 
 adc_oneshot_unit_handle_t adc1_handle;
-TaskHandle_t adc_task_handle = NULL;
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Semaphore + ISR hanlde setup
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -84,14 +85,13 @@ QueueHandle_t xQueue_Handler;
 //====================================================================================================================
 //====================================================================================================================
 
-void ISR_1_Timer_handler(void* pvParameters)
+void task_timer_handler(void* pvParameters)
 {
-    int  oread   = 0;
+    int  oread   = 0, iBuf = 0;
+    int  iMin = 0, iMax = 0; 
     int  iSum = 0, iAverageNow = 0;
     int  iCnt    = 0;
     int  iBufIN[10];
-
-    
 
     //esp_task_wdt_add(NULL);
 
@@ -101,8 +101,21 @@ void ISR_1_Timer_handler(void* pvParameters)
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
 
+        if (oread < 1000) {
+            if (oread < iBuf) {
+                iMax = iBuf;
+                ESP_LOGI(TAG_ISR, "max : %d,  time : %d", (int)iMax, (int)uiTimeBetweenInterrupts);  
+            } else if (oread > iBuf) {
+                iMin = iBuf;
+                ESP_LOGI(TAG_ISR, "min : %d,  time : %d", (int)iMin, (int)uiTimeBetweenInterrupts);  
+            }
+
+            iBuf = oread;
+        }
+
         //ESP_LOGI(TAG_ISR, "oread : %d < iAverageBuf : %d,  time : %d", (int)oread, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);                     
 
+        /*
         if (oread < 1600) {
 
             // measure gab
@@ -129,14 +142,15 @@ void ISR_1_Timer_handler(void* pvParameters)
                         xQueueSend(queue_result, bResult, portMAX_DELAY);
                         memset(bResult, 0, sizeof(bResult));
                         iCnt = 0;
+                        ESP_LOGI(TAG_ISR, "20000 ");
                     } else {
 
-                        if     (105 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) {
+                        if     ((105 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) && (iCnt>10)) {
                             bResult[iCnt] = true;
                             iCnt++;
                             //ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
                         }
-                        else if (210 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 240) {
+                        else if ((210 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 240) && (iCnt>10)) {
                             bResult[iCnt] = false;
                             iCnt++;
                             //ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
@@ -158,17 +172,31 @@ void ISR_1_Timer_handler(void* pvParameters)
         } else {
 
             iAverageNow = 0;
-        }
+        }*/
 
      vTaskDelay(10/portTICK_PERIOD_MS);
 
     }
+
 }
+
+void task_show_result(void* pvParameters)
+{
+    bool bA[100];
+
+    while (1) {
+        // Try to receive array from queue
+        if (queue_result && xQueueReceive(queue_result, bA, 0) == pdPASS) {
+            ESP_LOGI(TAG_ISR, ": [%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]", bA[0],  bA[1], bA[2], bA[3], bA[4], bA[5], bA[6], bA[7], bA[8], bA[9]);
+        }
+    }
+}
+
 
 bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx) {
 
     BaseType_t high_task_wakeup = pdFALSE;
-    vTaskNotifyGiveFromISR(adc_task_handle, &high_task_wakeup);
+    vTaskNotifyGiveFromISR(handle_task_adc, &high_task_wakeup);
     return high_task_wakeup == pdTRUE;;
 }
 
@@ -240,12 +268,12 @@ void app_main(void)
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_6, &chan_config));
 
     xTaskCreatePinnedToCore(
-        ISR_1_Timer_handler, 
-        "ISR_1_Timer_handler", 
+        task_timer_handler, 
+        "task_timer_handler", 
         2048, 
         NULL, 
         5, 
-        &adc_task_handle, 
+        &handle_task_adc, 
         0
     );
 
