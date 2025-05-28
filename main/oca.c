@@ -30,6 +30,11 @@
 #include "rtc_wdt.h"
 #include <esp_task_wdt.h>
 
+//#include "driver/i2s.h"
+#include "driver/i2s_std.h" 
+#include "driver/i2s_pdm.h" 
+#include "driver/i2s_tdm.h" 
+
 //#include "ledc.h"
 
 #include "defines.h"
@@ -40,6 +45,11 @@
 #define WDT_TIMEOUT_S 5  // Watchdog timeout in seconds
 #define TASK_LIST_BUFFER_SIZE 1024  // Buffer size for task list
 #define BETWEEN(value, min, max) (value < max && value > min)
+
+// I2S
+#define I2S_NUM         (0)
+#define SAMPLE_RATE     (1000000) // 1 MHz requested
+#define BUF_LEN         (1024)
 
 static const char *TAG_MQTT = "mqtt_example";
 static const char *TAG_ETH  = "eth_example";
@@ -99,8 +109,14 @@ void task_timer_handler(void* pvParameters)
 
 
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        uiLastInterruptTime = esp_timer_get_time();
         adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &oread);
-
+        uiCurrentTime = esp_timer_get_time();
+        uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;  
+        ESP_LOGI(TAG_ISR, "min : %d,  time : %d", (int)oread, (int)uiTimeBetweenInterrupts); 
+    }
+} 
+    /*
         if (oread < 1000) {
             if (oread < iBuf) {
                 iMax = iBuf;
@@ -112,51 +128,61 @@ void task_timer_handler(void* pvParameters)
 
             iBuf = oread;
         }
+        */
 
         //ESP_LOGI(TAG_ISR, "oread : %d < iAverageBuf : %d,  time : %d", (int)oread, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);                     
 
-        /*
-        if (oread < 1600) {
+/*        
+        if (oread < 1000) {
 
             // measure gab
             uiCurrentTime = esp_timer_get_time();
 
             // calc average
+            iSum = 0;
             for (iCnt = 0; iCnt < 10; iCnt++) {
                 if (iCnt == 0)      iBufIN[iCnt] = oread;
                 else                iBufIN[iCnt] = iBufOUT[iCnt - 1];
+
                 iSum += iBufIN[iCnt];
             }
             iAverageNow = iSum / 10;
 
             if (iAverageNow > iAverageBuf) {
                 iSetBig = 1;
+                //ESP_LOGI(TAG_ISR, "oread : %d > iAverageBuf : %d,  time : %d", (int)oread, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
+                uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
+                uiLastInterruptTime = uiCurrentTime;
             }
 
             else if (iAverageNow < iAverageBuf) {
                 //uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
                 if (iSetBig == 1) {
                     uiTimeBetweenInterrupts = uiCurrentTime - uiLastInterruptTime;
+                    uiLastInterruptTime = uiCurrentTime;
+
+                    ESP_LOGI(TAG_ISR, "oread : %d < iAverageBuf : %d,  time : %d", (int)oread, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
 
                     if (uiTimeBetweenInterrupts > 20000) {
+                        
                         xQueueSend(queue_result, bResult, portMAX_DELAY);
+                        //ESP_LOGI(TAG_ISR, "oread : %d < iAverageBuf : %d,  time : %d", (int)oread, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
                         memset(bResult, 0, sizeof(bResult));
                         iCnt = 0;
-                        ESP_LOGI(TAG_ISR, "20000 ");
+
                     } else {
 
                         if     ((105 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 130) && (iCnt>10)) {
                             bResult[iCnt] = true;
                             iCnt++;
-                            //ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
+                            ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
                         }
                         else if ((210 < uiTimeBetweenInterrupts && uiTimeBetweenInterrupts < 240) && (iCnt>10)) {
                             bResult[iCnt] = false;
                             iCnt++;
-                            //ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
+                            ESP_LOGI(TAG_ISR, "iAverageNow : %d < iAverageBuf : %d,  time : %d", (int)iAverageNow, (int)iAverageBuf, (int)uiTimeBetweenInterrupts);
                         }
-                        iSetBig = 0;
-                        uiLastInterruptTime = uiCurrentTime;
+                        iSetBig = 0;                        
                     }
                 }
             }
@@ -172,14 +198,15 @@ void task_timer_handler(void* pvParameters)
         } else {
 
             iAverageNow = 0;
-        }*/
+        }
 
-     vTaskDelay(10/portTICK_PERIOD_MS);
+     //vTaskDelay(10/portTICK_PERIOD_MS);
+     esp_rom_delay_us(10);
 
     }
 
 }
-
+*/
 void task_show_result(void* pvParameters)
 {
     bool bA[100];
@@ -198,6 +225,32 @@ bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm_event_
     BaseType_t high_task_wakeup = pdFALSE;
     vTaskNotifyGiveFromISR(handle_task_adc, &high_task_wakeup);
     return high_task_wakeup == pdTRUE;;
+}
+////////////////////////////////////////////////////////////////////////////////////////////
+// I2C
+////////////////////////////////////////////////////////////////////////////////////////////
+void task_i2c_handler(void* pvParameters)
+{
+    uint16_t buffer[BUF_LEN];
+    size_t bytes_read = 0;
+
+    while (1) {
+        int64_t start = esp_timer_get_time();
+        i2s_std_read(I2S_NUM, (void*)buffer, sizeof(buffer), &bytes_read, portMAX_DELAY);
+        int64_t end = esp_timer_get_time();
+
+        float samples = bytes_read / 2.0; // 16-bit samples
+        float time_us = end - start;
+        float actual_rate = samples / (time_us / 1e6);
+
+        ESP_LOGI(TAG_ISR, "Read %d samples in %.0f us (%.2f samples/sec)", (int)samples, time_us, actual_rate);
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    // Never reached, but for completeness:
+    i2s_adc_disable(I2S_NUM);
+    i2s_driver_uninstall(I2S_NUM);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -255,7 +308,9 @@ void app_main(void)
     esp_rom_gpio_pad_select_gpio(GPIO13_O_SPI_MOSI);      gpio_set_direction(GPIO13_O_SPI_MOSI,   GPIO_MODE_OUTPUT);
     esp_rom_gpio_pad_select_gpio(GPIO15_I_SPI_MISO);      gpio_set_direction(GPIO15_I_SPI_MISO,   GPIO_MODE_INPUT);
 
-    //adc_oneshot_unit_handle_t adc1_handle;
+    //===============================================================
+    //======== oneshot ==============================================
+    /*
     adc_oneshot_unit_init_cfg_t init_config = {
         .unit_id = ADC_UNIT_1,
     };
@@ -276,6 +331,34 @@ void app_main(void)
         &handle_task_adc, 
         0
     );
+    */
+    //===============================================================
+    //======== i2c===================================================
+    // Configure ADC
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(ADC_CHANNEL_6, ADC_ATTEN_DB_12);
+
+    // Configure I2S for ADC
+    i2s_config_t i2s_config = {
+        .mode = I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN,
+        .sample_rate = SAMPLE_RATE,
+        .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+        .channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT,
+        .communication_format = I2S_COMM_FORMAT_STAND_I2S,
+        .intr_alloc_flags = 0,
+        .dma_buf_count = 4,
+        .dma_buf_len = BUF_LEN,
+        .use_apll = false,
+        .tx_desc_auto_clear = false,
+        .fixed_mclk = 0
+    };
+    i2s_driver_install(I2S_NUM, &i2s_config, 0, NULL);
+    i2s_set_adc_mode(ADC_UNIT_1, ADC_CHANNEL_6);
+
+    // Enable ADC
+    i2s_adc_enable(I2S_NUM);
+
+
 
     //===============================================================
     //======== timer ================================================
@@ -285,7 +368,7 @@ void app_main(void)
     gptimer_config_t timer_config = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
         .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = 1000000, // 1 tick = 1us
+        .resolution_hz = 100, // 1 tick = 1us
     };
     ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
 
@@ -296,7 +379,7 @@ void app_main(void)
 
     // set alarm of timer
     gptimer_alarm_config_t alarm_config = {
-        .alarm_count = 1000, // 1 sec    
+        .alarm_count = 10, // 1 sec    
         .reload_count = 0,
         .flags.auto_reload_on_alarm = true,
     };
